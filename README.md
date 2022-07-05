@@ -6,6 +6,7 @@ vshender microservices repository
 ## Homework #16: docker-2
 
 - Added a pre-commit hook.
+- Added a Github PR template.
 
 <details><summary>Details</summary>
 
