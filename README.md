@@ -7,6 +7,7 @@ vshender microservices repository
 
 - Added a pre-commit hook.
 - Added a Github PR template.
+- Added Github actions.
 
 <details><summary>Details</summary>
 
