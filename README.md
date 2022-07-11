@@ -10,6 +10,7 @@ vshender microservices repository
 - Added Github actions.
 - Installed Docker.
 - Experimented with various Docker commands.
+- Created a Docker machine on a Yandex.Cloud VM.
 
 <details><summary>Details</summary>
 
@@ -278,5 +279,92 @@ Untagged: hello-world@sha256:13e367d31ae85359f42d637adf6da428f76d75dc9afeb3c21fa
 Deleted: sha256:feb5d9fea6a5e9606aa995e879d862b825965ba48de054caab5ef356dc6b3412
 Deleted: sha256:e07ee1baac5fae6a26f30cabfe54a36d3402f96afda318fe0a96cec4ca393359
 ```
+
+Create a Docker machine on a Yandex.Cloud VM:
+```
+$ yc compute instance create \
+  --name docker-host \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+  --ssh-key ~/.ssh/appuser.pub
+done (36s)
+id: fhmbrm0559oh9jgfsrds
+folder_id: ...
+created_at: "2022-07-11T14:42:35Z"
+name: docker-host
+zone_id: ru-central1-a
+platform_id: standard-v2
+resources:
+  memory: "2147483648"
+  cores: "2"
+  core_fraction: "100"
+status: RUNNING
+boot_disk:
+  mode: READ_WRITE
+  device_name: fhm83c85c1oab87bpunn
+  auto_delete: true
+  disk_id: fhm83c85c1oab87bpunn
+network_interfaces:
+- index: "0"
+  mac_address: d0:0d:bd:d8:05:2a
+  subnet_id: e9bqom95bd1o3fkemarr
+  primary_v4_address:
+    address: 10.128.0.28
+    one_to_one_nat:
+      address: 62.84.114.61
+      ip_version: IPV4
+fqdn: fhmbrm0559oh9jgfsrds.auto.internal
+scheduling_policy: {}
+network_settings:
+  type: STANDARD
+placement_policy: {}
+
+$ docker-machine create \
+  --driver generic \
+  --generic-ip-address=62.84.114.61 \
+  --generic-ssh-user yc-user \
+  --generic-ssh-key ~/.ssh/appuser \
+  docker-host
+Creating CA: /Users/vshender/.docker/machine/certs/ca.pem
+Creating client certificate: /Users/vshender/.docker/machine/certs/cert.pem
+Running pre-create checks...
+Creating machine...
+(docker-host) Importing SSH key...
+Waiting for machine to be running, this may take a few minutes...
+Detecting operating system of created instance...
+Waiting for SSH to be available...
+Detecting the provisioner...
+Provisioning with ubuntu(systemd)...
+Installing Docker...
+Copying certs to the local machine directory...
+Copying certs to the remote machine...
+Setting Docker configuration on the remote daemon...
+Checking connection to Docker...
+Docker is up and running!
+To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: docker-machine env docker-host
+
+$ docker-machine ls
+NAME          ACTIVE   DRIVER    STATE     URL                       SWARM   DOCKER      ERRORS
+docker-host   -        generic   Running   tcp://62.84.114.61:2376           v20.10.17
+
+$ eval $(docker-machine env docker-host)
+```
+
+Compare the output of `htop`:
+```
+$ docker run --rm -ti tehbilly/htop
+Unable to find image 'tehbilly/htop:latest' locally
+latest: Pulling from tehbilly/htop
+1eae7a7426b0: Pull complete
+ac2ca7632b9e: Pull complete
+Digest: sha256:2284dc3e689c1db92163af48b329b93d4de8c778d411c0e6e375430736e57117
+Status: Downloaded newer image for tehbilly/htop:latest
+
+$ docker run --rm --pid host -ti tehbilly/htop
+```
+
+`htop` from the last command displays all processes of the Docker machine's VM.
+
 
 </details>
