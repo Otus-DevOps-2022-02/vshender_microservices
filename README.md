@@ -12,6 +12,7 @@ vshender microservices repository
 - Experimented with various Docker commands.
 - Created a Docker machine on a Yandex.Cloud VM.
 - Built the application image and ran it.
+- Pushed the application image to DockerHub.
 
 <details><summary>Details</summary>
 
@@ -426,5 +427,70 @@ $ docker run --name reddit -d --network=host reddit:latest
 ```
 
 Open http://62.84.114.61:9292/ and check the application.
+
+Push the application image to DockerHub:
+```
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: vshender
+Password:
+Login Succeeded
+
+Logging in with your password grants your terminal complete access to your account.
+For better security, log in with a limited-privilege personal access token. Learn more at https://docs.docker.com/go/access-tokens/
+
+$ docker tag reddit:latest vshender/otus-reddit:1.0
+
+$ docker push vshender/otus-reddit:1.0
+The push refers to repository [docker.io/vshender/otus-reddit]
+561d32163b5d: Pushed
+4e468ef4e0d7: Pushed
+e0b51e6e0b00: Pushed
+c0e930ada599: Pushed
+7e834663955a: Pushed
+6abc2b3e7bb0: Pushed
+7133d482fda6: Pushed
+207ddfee0858: Pushed
+1251204ef8fc: Pushed
+47ef83afae74: Pushed
+df54c846128d: Pushed
+be96a3f634de: Pushed
+1.0: digest: sha256:7b24122dde3b25e650192c096f228bd40136b24512db78444b254d8a794f2737 size: 2823
+
+$ eval $(docker-machine env --unset)
+
+$ docker run --name reddit -d -p 9292:9292 vshender/otus-reddit:1.0
+Unable to find image 'vshender/otus-reddit:1.0' locally
+1.0: Pulling from vshender/otus-reddit
+58690f9b18fc: Pull complete
+b51569e7c507: Pull complete
+da8ef40b9eca: Pull complete
+fb15d46c38dc: Pull complete
+15ab9c91db51: Pull complete
+2bf406696b28: Pull complete
+ead2fc68327c: Pull complete
+b4608768d268: Pull complete
+081b5dd5e53c: Pull complete
+d8be6b88f4d7: Pull complete
+0712db74546f: Pull complete
+9b5b1bbca7bd: Pull complete
+Digest: sha256:7b24122dde3b25e650192c096f228bd40136b24512db78444b254d8a794f2737
+Status: Downloaded newer image for vshender/otus-reddit:1.0
+faacc704c59019ecff87bc57bb9ecc0dad9f8a14df6a9137548ae633e6efed9e
+```
+
+Open http://127.0.0.1:9292/ and test the application.
+
+Destroy the Docker machine:
+```
+$ docker-machine rm docker-host
+About to remove docker-host
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed docker-host
+
+$ yc compute instance delete docker-host
+done (15s)
+```
 
 </details>
