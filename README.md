@@ -11,6 +11,7 @@ vshender microservices repository
 - Installed Docker.
 - Experimented with various Docker commands.
 - Created a Docker machine on a Yandex.Cloud VM.
+- Built the application image and ran it.
 
 <details><summary>Details</summary>
 
@@ -366,5 +367,64 @@ $ docker run --rm --pid host -ti tehbilly/htop
 
 `htop` from the last command displays all processes of the Docker machine's VM.
 
+
+Build the application image and run it:
+```
+$ cd docker-monolith
+
+$ docker build -t reddit:latest .
+Sending build context to Docker daemon  18.94kB
+Step 1/7 : FROM ubuntu:16.04
+16.04: Pulling from library/ubuntu
+58690f9b18fc: Pull complete
+b51569e7c507: Pull complete
+da8ef40b9eca: Pull complete
+fb15d46c38dc: Pull complete
+Digest: sha256:20858ebbc96215d6c3c574f781133ebffdc7c18d98af4f294cc4c04871a6fe61
+Status: Downloaded newer image for ubuntu:16.04
+ ---> b6f507652425
+Step 2/7 : RUN apt-get update
+ ---> Running in 978554bf973d
+...
+Step 10/11 : RUN chmod 0777 /start.sh
+ ---> Running in 638c267016a6
+Removing intermediate container 638c267016a6
+ ---> 9bd35c0d173f
+Step 11/11 : CMD ["/start.sh"]
+ ---> Running in 3eb83e42f4ea
+Removing intermediate container 3eb83e42f4ea
+ ---> ee329dbecf6e
+Successfully built ee329dbecf6e
+Successfully tagged reddit:latest
+
+Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
+
+$ docker images
+REPOSITORY      TAG       IMAGE ID       CREATED         SIZE
+reddit          latest    42a6b2e06960   5 seconds ago   676MB
+ubuntu          18.04     ad080923604a   5 weeks ago     63.1MB
+ubuntu          16.04     b6f507652425   10 months ago   135MB
+tehbilly/htop   latest    4acd2b4de755   4 years ago     6.91MB
+
+$ docker images -a
+REPOSITORY      TAG       IMAGE ID       CREATED              SIZE
+<none>          <none>    3d3d06782304   15 seconds ago       676MB
+reddit          latest    42a6b2e06960   15 seconds ago       676MB
+<none>          <none>    12ce4f78fa32   17 seconds ago       676MB
+<none>          <none>    dc066c50f7bb   32 seconds ago       660MB
+<none>          <none>    c99d719dd6ec   32 seconds ago       660MB
+<none>          <none>    ec6dec58fbe7   33 seconds ago       660MB
+<none>          <none>    2bdcf5ce9d40   33 seconds ago       660MB
+<none>          <none>    9dc5324bcfce   37 seconds ago       660MB
+<none>          <none>    251c190e19a9   About a minute ago   166MB
+ubuntu          18.04     ad080923604a   5 weeks ago          63.1MB
+ubuntu          16.04     b6f507652425   10 months ago        135MB
+tehbilly/htop   latest    4acd2b4de755   4 years ago          6.91MB
+
+$ docker run --name reddit -d --network=host reddit:latest
+480ef124283b116af29f76e0adc167c89e5db8610bce3e8befafa7cd6bcd34a1
+```
+
+Open http://62.84.114.61:9292/ and check the application.
 
 </details>
