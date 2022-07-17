@@ -13,6 +13,7 @@ vshender microservices repository
 - Created a Docker machine on a Yandex.Cloud VM.
 - Built the application image and ran it.
 - Pushed the application image to DockerHub.
+- Implemented the application deployment.
 
 <details><summary>Details</summary>
 
@@ -491,6 +492,84 @@ Successfully removed docker-host
 
 $ yc compute instance delete docker-host
 done (15s)
+```
+
+Create infrastructure and deploy the application:
+```
+$ cd infra
+
+$ packer build -var-file=packer/variables.json packer/docker-host.json
+...
+
+==> Wait completed after 5 minutes 17 seconds
+
+==> Builds finished. The artifacts of successful builds are:
+--> yandex: A disk image was created: docker-host-1658054613 (id: fd890m36h1ti7psoioh9) with family name docker-host
+
+$ yc compute image list
++----------------------+----------------------------+-----------------+----------------------+--------+
+|          ID          |            NAME            |     FAMILY      |     PRODUCT IDS      | STATUS |
++----------------------+----------------------------+-----------------+----------------------+--------+
+...
+| fd890m36h1ti7psoioh9 | docker-host-1658054613     | docker-host     | f2ep34rv24tdc64fekvu | READY  |
+...
++----------------------+----------------------------+-----------------+----------------------+--------+
+
+$ cd terraform
+
+$ terraform init
+Initializing the backend...
+
+Initializing provider plugins...
+- Finding yandex-cloud/yandex versions matching "~> 0.73.0"...
+- Finding latest version of hashicorp/local...
+- Installing yandex-cloud/yandex v0.73.0...
+- Installed yandex-cloud/yandex v0.73.0 (unauthenticated)
+- Installing hashicorp/local v2.2.3...
+- Installed hashicorp/local v2.2.3 (unauthenticated)
+
+...
+
+$ terraform apply -auto-approve
+...
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+app_vm_ips = [
+  "51.250.91.72",
+  "62.84.116.253",
+]
+
+
+$ cd ../ansible
+
+$ ansible-playbook --skip-tags install_docker site.yml
+
+PLAY [Install Docker] ********************************************************************************************
+
+PLAY [Deploy reddit application] *********************************************************************************
+
+TASK [Run reddit app container] **********************************************************************************
+changed: [reddit-app-0]
+changed: [reddit-app-1]
+
+PLAY RECAP *******************************************************************************************************
+reddit-app-0               : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+reddit-app-1               : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Open http://51.250.91.72:9292/ and http://62.84.116.253:9292/ and check the application.
+
+Destroy the application's infrastructure:
+```
+$ cd ../terraform
+
+$ terraform destroy -auto-approve
+...
+
+Destroy complete! Resources: 3 destroyed.
 ```
 
 </details>
