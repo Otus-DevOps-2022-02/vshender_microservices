@@ -578,7 +578,100 @@ Destroy complete! Resources: 3 destroyed.
 ## Homework #17: docker-3
 
 - Added the reddit application microservices code.
+- Added Dockerfiles for the application images.
+- Built the application images.
+- Ran the application.
 
 <details><summary>Details</summary>
+
+Prepare a Docker machine:
+```
+$ yc compute instance create \
+  --name docker-host \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+  --ssh-key ~/.ssh/appuser.pub
+...
+      one_to_one_nat:
+        address: 62.84.119.234
+...
+
+$ docker-machine create \
+  --driver generic \
+  --generic-ip-address=62.84.119.234 \
+  --generic-ssh-user yc-user \
+  --generic-ssh-key ~/.ssh/appuser \
+  docker-host
+...
+
+$ eval $(docker-machine env docker-host)
+```
+
+Build the application images:
+```
+$ cd src
+
+$ docker build -t vshender/post:1.0 ./post-py
+...
+Successfully built 8e9049ae34d6
+Successfully tagged vshender/post:1.0
+
+$ docker build -t vshender/comment:1.0 ./comment
+...
+Successfully built 6ba027cfeb81
+Successfully tagged vshender/comment:1.0
+
+$ docker build -t vshender/ui:1.0 ./ui
+...
+Successfully built fc53a1755fe2
+Successfully tagged vshender/ui:1.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED              SIZE
+vshender/ui        1.0            fc53a1755fe2   11 seconds ago       772MB
+vshender/comment   1.0            6ba027cfeb81   About a minute ago   770MB
+vshender/post      1.0            8e9049ae34d6   2 minutes ago        111MB
+ruby               2.2            6c8e6f9667b2   4 years ago          715MB
+python             3.6.0-alpine   cb178ebbf0f2   5 years ago          88.6MB
+```
+
+Run the application:
+```
+$ docker network create reddit
+fd5feff84899137daa764e9cb2a3094a85ea6dace71dfb54718364ab1d1fb802
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    mongo:latest
+Unable to find image 'mongo:latest' locally
+latest: Pulling from library/mongo
+...
+Digest: sha256:82302b06360729842acd27ab8a91c90e244f17e464fcfd366b7427af652c5559
+Status: Downloaded newer image for mongo:latest
+bda52d0c6a16860162e6b2c281ce5e5d03a7d68368e7895484e1972a24f17095
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post \
+    vshender/post:1.0
+3523c4b38f96fe169ccbe7aab75e0cc3ff38d07edfb51b820b94a0770a7aca0a
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment \
+    vshender/comment:1.0
+eaf56f450bf1cf781e1d6cae175918aee6e5f0e59844cdea5e961f2194aaf5a6
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    vshender/ui:1.0
+9ecc25b9e9830c1480279519f62818efc5c93eb13368b9fc2c6751cb6a8b0038
+```
+
+Open http://62.84.119.234:9292/ and test the application.
 
 </details>
