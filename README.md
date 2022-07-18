@@ -856,6 +856,7 @@ reddit
 
 - Compared the `none` and `host` network drivers.
 - Ran the application containers on two bridge networks so that the `ui` service didn't have access to the DB.
+- Added a `docker-compose.yml` file to run the application.
 
 <details><summary>Details</summary>
 
@@ -1070,6 +1071,47 @@ e280830eabed
 43fe9073a6bc
 667d364af1a7
 e2f912af502d
+```
+
+Use the `docker-compose.yml` file to run the application:
+```
+$ cd src
+
+$ export USERNAME=vshender
+
+$ docker-compose up -d
+Creating network "src_reddit" with the default driver
+Creating volume "src_post_db" with default driver
+Pulling db (mongo:3.2)...
+...
+Creating src_post_1    ... done
+Creating src_comment_1 ... done
+Creating src_ui_1      ... done
+Creating src_db_1      ... done
+
+$ docker-compose ps
+    Name                  Command             State                    Ports
+----------------------------------------------------------------------------------------------
+src_comment_1   puma                          Up
+src_db_1        docker-entrypoint.sh mongod   Up      27017/tcp
+src_post_1      python3 post_app.py           Up
+src_ui_1        puma                          Up      0.0.0.0:9292->9292/tcp,:::9292->9292/tcp
+```
+
+Open http://62.84.119.234:9292/ and check the application.
+
+Shut down the application:
+```
+$ docker-compose down
+Stopping src_comment_1 ... done
+Stopping src_db_1      ... done
+Stopping src_ui_1      ... done
+Stopping src_post_1    ... done
+Removing src_comment_1 ... done
+Removing src_db_1      ... done
+Removing src_ui_1      ... done
+Removing src_post_1    ... done
+Removing network src_reddit
 ```
 
 </summary>
