@@ -582,6 +582,7 @@ Destroy complete! Resources: 3 destroyed.
 - Built the application images.
 - Ran the application.
 - Ran the application containers using different network aliases.
+- Optimized the `comment` and `ui` images using an Ubuntu base image.
 
 <details><summary>Details</summary>
 
@@ -618,12 +619,12 @@ $ docker build -t vshender/post:1.0 ./post-py
 Successfully built 8e9049ae34d6
 Successfully tagged vshender/post:1.0
 
-$ docker build -t vshender/comment:1.0 ./comment
+$ docker build -t vshender/comment:1.0 -f Dockerfile.ruby ./comment
 ...
 Successfully built 6ba027cfeb81
 Successfully tagged vshender/comment:1.0
 
-$ docker build -t vshender/ui:1.0 ./ui
+$ docker build -t vshender/ui:1.0 -f Dockerfile.ruby ./ui
 ...
 Successfully built fc53a1755fe2
 Successfully tagged vshender/ui:1.0
@@ -714,5 +715,30 @@ $ docker run -d \
 ```
 
 Open http://62.84.119.234:9292/ and test the application.
+
+Optimize the `comment` and `ui` images using an Ubuntu base image and examine the image sizes:
+```
+$ docker build -t vshender/comment:2.0 ./comment
+...
+Successfully built a77efba79646
+Successfully tagged vshender/comment:2.0
+
+$ docker build -t vshender/ui:2.0 ./ui
+...
+Successfully built 25e1f3b0b53e
+Successfully tagged vshender/ui:2.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED          SIZE
+vshender/ui        2.0            25e1f3b0b53e   10 seconds ago   410MB
+vshender/comment   2.0            a77efba79646   46 seconds ago   407MB
+vshender/ui        1.0            fc53a1755fe2   30 minutes ago   772MB
+vshender/comment   1.0            6ba027cfeb81   31 minutes ago   770MB
+vshender/post      1.0            8e9049ae34d6   32 minutes ago   111MB
+mongo              latest         c8b57c4bf7e3   4 weeks ago      701MB
+ubuntu             16.04          b6f507652425   10 months ago    135MB
+ruby               2.2            6c8e6f9667b2   4 years ago      715MB
+python             3.6.0-alpine   cb178ebbf0f2   5 years ago      88.6MB
+```
 
 </details>
