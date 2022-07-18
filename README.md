@@ -850,3 +850,109 @@ reddit
 ```
 
 </details>
+
+
+## Homework 18: docker-4
+
+- Compared the `none` and `host` network drivers.
+
+<details><summary>Details</summary>
+
+Compare the `none` and `host` network drivers:
+```
+$ eval $(docker-machine env docker-host)
+
+$ docker run --rm --network none joffotron/docker-net-tools -c ifconfig
+Unable to find image 'joffotron/docker-net-tools:latest' locally
+...
+Status: Downloaded newer image for joffotron/docker-net-tools:latest
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+$ docker run --rm --network host joffotron/docker-net-tools -c ifconfig
+br-fd5feff84899 Link encap:Ethernet  HWaddr 02:42:4B:75:B2:8B
+          inet addr:172.18.0.1  Bcast:172.18.255.255  Mask:255.255.0.0
+          inet6 addr: fe80::42:4bff:fe75:b28b%32622/64 Scope:Link
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:281 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:353 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:185211 (180.8 KiB)  TX bytes:160578 (156.8 KiB)
+
+docker0   Link encap:Ethernet  HWaddr 02:42:8A:EC:37:51
+          inet addr:172.17.0.1  Bcast:172.17.255.255  Mask:255.255.0.0
+          inet6 addr: fe80::42:8aff:feec:3751%32622/64 Scope:Link
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:52155 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:85900 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:4111194 (3.9 MiB)  TX bytes:1236827460 (1.1 GiB)
+
+eth0      Link encap:Ethernet  HWaddr D0:0D:17:28:49:B7
+          inet addr:10.128.0.26  Bcast:10.128.0.255  Mask:255.255.255.0
+          inet6 addr: fe80::d20d:17ff:fe28:49b7%32622/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:224231 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:119906 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:3215951264 (2.9 GiB)  TX bytes:11878584 (11.3 MiB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1%32622/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:100284 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:100284 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:7388480 (7.0 MiB)  TX bytes:7388480 (7.0 MiB)
+
+$ docker-machine ssh docker-host sudo apt install -y net-tools && ifconfig
+...
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 16384
+        options=1203<RXCSUM,TXCSUM,TXSTATUS,SW_TIMESTAMP>
+        inet 127.0.0.1 netmask 0xff000000
+        inet6 ::1 prefixlen 128
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x1
+        nd6 options=201<PERFORMNUD,DAD>
+gif0: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
+stf0: flags=0<> mtu 1280
+XHC1: flags=0<> mtu 0
+XHC0: flags=0<> mtu 0
+XHC20: flags=0<> mtu 0
+VHC128: flags=0<> mtu 0
+en5: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ...
+ap1: flags=8802<BROADCAST,SIMPLEX,MULTICAST> mtu 1500
+        ...
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ...
+awdl0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ...
+llw0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ...
+en1: flags=8963<UP,BROADCAST,SMART,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ...
+en2: flags=8963<UP,BROADCAST,SMART,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ...
+en3: flags=8963<UP,BROADCAST,SMART,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ...
+en4: flags=8963<UP,BROADCAST,SMART,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ...
+bridge0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ...
+utun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1380
+        ...
+utun1: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 2000
+        ...
+utun2: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1000
+        ...
+en8: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ...
+```
+
+</summary>
