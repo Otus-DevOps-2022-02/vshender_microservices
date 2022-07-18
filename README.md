@@ -858,6 +858,7 @@ reddit
 - Ran the application containers on two bridge networks so that the `ui` service didn't have access to the DB.
 - Added a `docker-compose.yml` file to run the application.
 - Modified `docker-compose.yml` to run the application containers on two bridge networks.
+- Parameterized `docker-compose.yml`.
 
 <details><summary>Details</summary>
 

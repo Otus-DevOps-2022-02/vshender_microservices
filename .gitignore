@@ -17,3 +17,5 @@ inventory
 *.backup
 
 *.retry
+
+.env
