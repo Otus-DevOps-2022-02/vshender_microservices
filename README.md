@@ -573,3 +573,12 @@ Destroy complete! Resources: 3 destroyed.
 ```
 
 </details>
+
+
+## Homework #17: docker-3
+
+- Added the reddit application microservices code.
+
+<details><summary>Details</summary>
+
+</details>
