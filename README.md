@@ -855,6 +855,7 @@ reddit
 ## Homework 18: docker-4
 
 - Compared the `none` and `host` network drivers.
+- Ran the application containers on two bridge networks so that the `ui` service didn't have access to the DB.
 
 <details><summary>Details</summary>
 
@@ -953,6 +954,122 @@ utun2: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1000
         ...
 en8: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
         ...
+```
+
+Run the application containers on two bridge networks so that the `ui` service doesn't have access to the DB.
+```
+$ docker network create back_net --subnet=10.0.2.0/24
+5f5f01466d0c881bed1f3c058ad049f3cc2a90aa09b8a6499c4da77fcf77c236
+
+$ docker network create front_net --subnet=10.0.1.0/24
+22bc170d24e9805cbdd8d7e6de6bea69f40529e901234d53df595910080ef173
+
+$ docker network list
+NETWORK ID     NAME        DRIVER    SCOPE
+5f5f01466d0c   back_net    bridge    local
+f580f42afc1e   bridge      bridge    local
+22bc170d24e9   front_net   bridge    local
+ede3e8bcd3df   host        host      local
+6ac654ba85f4   none        null      local
+
+$ docker run -d --network=front_net -p 9292:9292 --name ui vshender/ui:3.0
+e2f912af502d56aa42a26623d1751c280999b9ee81b7c79d8a50c14822d1f81b
+
+$ docker run -d --network=back_net --name comment vshender/comment:3.0
+667d364af1a74e273785dbff6693cd87544c387dfd5bcecc827aaed4c8c9afc3
+
+$ docker run -d --network=back_net --name post vshender/post:2.0
+43fe9073a6bc21a267fe1aacf9092567e9f069057b62b409fae8ccd91e92fcd6
+
+$ docker run -d --network=back_net --name mongo_db --network-alias=post_db --network-alias=comment_db -v reddit_db:/data/db mongo:latest
+e280830eabede0a4a81f0ecd265d27c24c8c9832dda83315d0c05148d89f4672
+
+$ docker network connect front_net post
+
+$ docker network connect front_net comment
+```
+
+Open http://62.84.119.234:9292/ and check the application.
+
+Examine network on Docker machine:
+```
+$ docker-machine ssh docker-host
+Welcome to Ubuntu 18.04.6 LTS (GNU/Linux 4.15.0-112-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+New release '20.04.4 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+yc-user@docker-host:~$ sudo apt update && sudo apt install bridge-utils
+...
+
+yc-user@docker-host:~$ sudo docker network ls
+NETWORK ID     NAME        DRIVER    SCOPE
+5f5f01466d0c   back_net    bridge    local
+f580f42afc1e   bridge      bridge    local
+22bc170d24e9   front_net   bridge    local
+ede3e8bcd3df   host        host      local
+6ac654ba85f4   none        null      local
+
+yc-user@docker-host:~$ ifconfig | grep ^br
+br-22bc170d24e9: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+br-5f5f01466d0c: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+
+yc-user@docker-host:~$ brctl show br-22bc170d24e9
+bridge name             bridge id               STP enabled     interfaces
+br-22bc170d24e9         8000.024211a431d0       no              veth6437a35
+                                                                vethf4ab308
+                                                                vethf91e4b1
+
+yc-user@docker-host:~$ brctl show br-5f5f01466d0c
+bridge name             bridge id               STP enabled     interfaces
+br-5f5f01466d0c         8000.024293451890       no              veth2ebcd2d
+                                                                vetha5ab886
+                                                                vetha6fc845
+
+yc-user@docker-host:~$ sudo iptables -nL -t nat
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination
+DOCKER     all  --  0.0.0.0/0            0.0.0.0/0            ADDRTYPE match dst-type LOCAL
+
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+DOCKER     all  --  0.0.0.0/0           !127.0.0.0/8          ADDRTYPE match dst-type LOCAL
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination
+MASQUERADE  all  --  10.0.1.0/24          0.0.0.0/0
+MASQUERADE  all  --  10.0.2.0/24          0.0.0.0/0
+MASQUERADE  all  --  172.17.0.0/16        0.0.0.0/0
+MASQUERADE  tcp  --  10.0.1.2             10.0.1.2             tcp dpt:9292
+
+Chain DOCKER (2 references)
+target     prot opt source               destination
+RETURN     all  --  0.0.0.0/0            0.0.0.0/0
+RETURN     all  --  0.0.0.0/0            0.0.0.0/0
+RETURN     all  --  0.0.0.0/0            0.0.0.0/0
+DNAT       tcp  --  0.0.0.0/0            0.0.0.0/0            tcp dpt:9292 to:10.0.1.2:9292
+
+yc-user@docker-host:~$ ps -ef | grep docker-proxy
+root     20259  3730  0 18:46 ?        00:00:00 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 9292 -container-ip 10.0.1.2 -container-port 9292
+root     20266  3730  0 18:46 ?        00:00:00 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 9292 -container-ip 10.0.1.2 -container-port 9292
+yc-user  23759 22660  0 18:56 pts/0    00:00:00 grep --color=auto docker-proxy
+
+yc-user@docker-host:~$ logout
+```
+
+Stop the application containers:
+```
+$ docker stop $(docker ps -q)
+e280830eabed
+43fe9073a6bc
+667d364af1a7
+e2f912af502d
 ```
 
 </summary>
