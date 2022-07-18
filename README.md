@@ -860,6 +860,7 @@ reddit
 - Modified `docker-compose.yml` to run the application containers on two bridge networks.
 - Parameterized `docker-compose.yml`.
 - Ran the application using the updated `docker-compose.yml` and specifying a project name.
+- Added the `docker-compose.override.yml` file that allows you to edit the application code and apply changes without rebuilding images.
 
 <details><summary>Details</summary>
 
