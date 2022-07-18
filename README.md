@@ -584,6 +584,7 @@ Destroy complete! Resources: 3 destroyed.
 - Ran the application containers using different network aliases.
 - Optimized the `comment` and `ui` images using an Ubuntu base image.
 - Optimized the application images using an Alpine base image.
+- Used a Docker volume to store MongoDB data.
 
 <details><summary>Details</summary>
 
@@ -770,6 +771,82 @@ vshender/ui        1.0            fc53a1755fe2   56 minutes ago   772MB
 vhsender/comment   1.0            6ba027cfeb81   57 minutes ago   770MB
 vshender/post      1.0            8e9049ae34d6   58 minutes ago   111MB
 ...
+```
+
+Use a Docker volume to store MongoDB data:
+```
+$ docker stop $(docker ps -q)
+fdd93a8b764b
+37fa1d2bbf3d
+33a8d0b88e3e
+ccd828e9f1fc
+
+$ docker volume create reddit_db
+reddit_db
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    -v reddit_db:/data/db \
+    mongo:latest
+94862b88ecc864b188468c65729f0c9843f0e7b6e5ba91c5ecbce42a44fe3512
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post \
+    vshender/post:2.0
+5129670cda53b9f1801c4a1af3e8a518cf74bf850562bcb074d866131f1b8e6b
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment \
+    vshender/comment:3.0
+9ac3d835180e961cf2e58dc40f24a343f7ce4034273ca448107ea6f137de455e
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    vshender/ui:3.0
+393b0942a19c612998f50e8f5424be082c9fe0f51128748eaf3cc6bae0bb7c21
+```
+
+Open http://62.84.119.234:9292/ and create some posts and comments.
+
+Restart a MongoDB container:
+```
+$ docker ps
+CONTAINER ID   IMAGE                  COMMAND                  CREATED         STATUS         PORTS                                       NAMES
+...
+94862b88ecc8   mongo:latest           "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   27017/tcp                                   serene_johnson
+
+$ docker stop 94862b88ecc8
+94862b88ecc8
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    -v reddit_db:/data/db \
+    mongo:latest
+155c291afafe61b76d70f89f3579f70217394f42f3344a25df0d17b7dec0f350
+```
+
+Open http://62.84.119.234:9292/ and verify that the created data still exists.
+
+Stop the application containers:
+```
+$ docker stop $(docker ps -q)
+155c291afafe
+393b0942a19c
+9ac3d835180e
+5129670cda53
+```
+
+Remove the created bridge network:
+```
+$ docker network rm reddit
+reddit
 ```
 
 </details>
