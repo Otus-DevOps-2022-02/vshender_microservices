@@ -859,6 +859,7 @@ reddit
 - Added a `docker-compose.yml` file to run the application.
 - Modified `docker-compose.yml` to run the application containers on two bridge networks.
 - Parameterized `docker-compose.yml`.
+- Ran the application using the updated `docker-compose.yml` and specifying a project name.
 
 <details><summary>Details</summary>
 
@@ -1114,6 +1115,46 @@ Removing src_db_1      ... done
 Removing src_ui_1      ... done
 Removing src_post_1    ... done
 Removing network src_reddit
+```
+
+Run the application using the updated `docker-compose.yml` and specifying a project name.
+```
+$ docker-compose -p reddit up -d
+Creating network "reddit_back_net" with the default driver
+Creating network "reddit_front_net" with the default driver
+Creating reddit_comment_1 ... done
+Creating reddit_db_1      ... done
+Creating reddit_ui_1      ... done
+Creating reddit_post_1    ... done
+```
+
+Open http://62.84.119.234:8000/ and check the application.
+
+Shut down the application:
+```
+$ docker-compose -p reddit down
+Stopping reddit_ui_1      ... done
+Stopping reddit_post_1    ... done
+Stopping reddit_db_1      ... done
+Stopping reddit_comment_1 ... done
+Removing reddit_ui_1      ... done
+Removing reddit_post_1    ... done
+Removing reddit_db_1      ... done
+Removing reddit_comment_1 ... done
+Removing network reddit_back_net
+Removing network reddit_front_net
+```
+
+Destroy the Docker machine:
+```
+$ docker-machine rm docker-host
+About to remove docker-host
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed docker-host
+
+$ yc compute instance delete docker-host
+done (15s)
 ```
 
 </summary>
