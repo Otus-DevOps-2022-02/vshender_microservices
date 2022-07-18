@@ -581,6 +581,7 @@ Destroy complete! Resources: 3 destroyed.
 - Added Dockerfiles for the application images.
 - Built the application images.
 - Ran the application.
+- Ran the application containers using different network aliases.
 
 <details><summary>Details</summary>
 
@@ -670,6 +671,46 @@ $ docker run -d \
     -p 9292:9292 \
     vshender/ui:1.0
 9ecc25b9e9830c1480279519f62818efc5c93eb13368b9fc2c6751cb6a8b0038
+```
+
+Open http://62.84.119.234:9292/ and test the application.
+
+Run the application containers using different network aliases.
+```
+$ docker kill $(docker ps -q)
+9ecc25b9e983
+eaf56f450bf1
+3523c4b38f96
+bda52d0c6a16
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_database \
+    --network-alias=comment_database \
+    mongo:latest
+ccd828e9f1fcd9c1d01326ab5f78a73301fd9cd251d3b5dfa6c4571a1b31f7b0
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_service \
+    -e POST_DATABASE_HOST=post_database \
+    vshender/post:1.0
+33a8d0b88e3e96ca92159c865f157e3d9ade28619abce046bfe6d7dbb4cfa207
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment_service \
+    -e COMMENT_DATABASE_HOST=comment_database \
+    vshender/comment:1.0
+077c425687b739403cae90c0e8a3e4aef3e8675609369a53e08c5c52ed0b6c80
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    -e POST_SERVICE_HOST=post_service \
+    -e COMMENT_SERVICE_HOST=comment_service \
+    vshender/ui:1.0
+68af4302524ca413be790ba976d75363217f0c77c205869a0cbbab7138d6d3f9
 ```
 
 Open http://62.84.119.234:9292/ and test the application.
