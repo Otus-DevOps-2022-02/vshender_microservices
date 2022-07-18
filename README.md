@@ -857,6 +857,7 @@ reddit
 - Compared the `none` and `host` network drivers.
 - Ran the application containers on two bridge networks so that the `ui` service didn't have access to the DB.
 - Added a `docker-compose.yml` file to run the application.
+- Modified `docker-compose.yml` to run the application containers on two bridge networks.
 
 <details><summary>Details</summary>
 
