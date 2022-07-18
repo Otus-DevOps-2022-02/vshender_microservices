@@ -1,16 +1,14 @@
-FROM ubuntu:16.04
+FROM ruby:2.5-alpine
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y ruby-full=1:2.3.0+1 ruby-dev=1:2.3.0+1 build-essential=12.1ubuntu2 \
-    && rm -rf /var/lib/apt/lists/* \
-    && gem install bundler:2.1.4 --no-ri --no-rdoc
+WORKDIR /app
 
-ENV APP_HOME /app
-
-WORKDIR $APP_HOME
 COPY Gemfile* $APP_HOME/
-RUN bundle install
-COPY . $APP_HOME
+RUN apk --no-cache --update add build-base=0.5-r3 \
+    && bundle install \
+    && apk del build-base \
+    && rm -rf /root/.bundle
+
+COPY . /app
 
 ENV COMMENT_DATABASE_HOST comment_db
 ENV COMMENT_DATABASE comments

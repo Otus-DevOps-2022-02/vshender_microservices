@@ -583,6 +583,7 @@ Destroy complete! Resources: 3 destroyed.
 - Ran the application.
 - Ran the application containers using different network aliases.
 - Optimized the `comment` and `ui` images using an Ubuntu base image.
+- Optimized the application images using an Alpine base image.
 
 <details><summary>Details</summary>
 
@@ -614,7 +615,7 @@ Build the application images:
 ```
 $ cd src
 
-$ docker build -t vshender/post:1.0 ./post-py
+$ docker build -t vshender/post:1.0 -f Dockerfile.old ./post-py
 ...
 Successfully built 8e9049ae34d6
 Successfully tagged vshender/post:1.0
@@ -718,12 +719,12 @@ Open http://62.84.119.234:9292/ and test the application.
 
 Optimize the `comment` and `ui` images using an Ubuntu base image and examine the image sizes:
 ```
-$ docker build -t vshender/comment:2.0 ./comment
+$ docker build -t vshender/comment:2.0 -f Dockerfile.ubuntu ./comment
 ...
 Successfully built a77efba79646
 Successfully tagged vshender/comment:2.0
 
-$ docker build -t vshender/ui:2.0 ./ui
+$ docker build -t vshender/ui:2.0 -f Dockerfile.ubuntu ./ui
 ...
 Successfully built 25e1f3b0b53e
 Successfully tagged vshender/ui:2.0
@@ -739,6 +740,36 @@ mongo              latest         c8b57c4bf7e3   4 weeks ago      701MB
 ubuntu             16.04          b6f507652425   10 months ago    135MB
 ruby               2.2            6c8e6f9667b2   4 years ago      715MB
 python             3.6.0-alpine   cb178ebbf0f2   5 years ago      88.6MB
+```
+
+Optimize the application images using an Alpine base image:
+```
+$ docker build -t vshender/post:2.0 ./post-py
+...
+Successfully built 9f025b407f1a
+Successfully tagged vshender/post:2.0
+
+$ docker build -t vshender/comment:3.0 ./comment
+...
+Successfully built 62859ed3f3bf
+Successfully tagged vshender/comment:3.0
+
+$ docker build -t vshender/ui:3.0 ./ui
+...
+Successfully built bb8fe4b4093a
+Successfully tagged vshender/ui:3.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED          SIZE
+vshender/ui        3.0            bb8fe4b4093a   9 seconds ago    71.6MB
+vshender/comment   3.0            62859ed3f3bf   4 minutes ago    69.5MB
+vshender/post      2.0            9f025b407f1a   5 minutes ago    107MB
+vshender/ui        2.0            25e1f3b0b53e   25 minutes ago   410MB
+vshender/comment   2.0            a77efba79646   26 minutes ago   407MB
+vshender/ui        1.0            fc53a1755fe2   56 minutes ago   772MB
+vhsender/comment   1.0            6ba027cfeb81   57 minutes ago   770MB
+vshender/post      1.0            8e9049ae34d6   58 minutes ago   111MB
+...
 ```
 
 </details>
