@@ -573,3 +573,280 @@ Destroy complete! Resources: 3 destroyed.
 ```
 
 </details>
+
+
+## Homework #17: docker-3
+
+- Added the reddit application microservices code.
+- Added Dockerfiles for the application images.
+- Built the application images.
+- Ran the application.
+- Ran the application containers using different network aliases.
+- Optimized the `comment` and `ui` images using an Ubuntu base image.
+- Optimized the application images using an Alpine base image.
+- Used a Docker volume to store MongoDB data.
+
+<details><summary>Details</summary>
+
+Prepare a Docker machine:
+```
+$ yc compute instance create \
+  --name docker-host \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+  --ssh-key ~/.ssh/appuser.pub
+...
+      one_to_one_nat:
+        address: 62.84.119.234
+...
+
+$ docker-machine create \
+  --driver generic \
+  --generic-ip-address=62.84.119.234 \
+  --generic-ssh-user yc-user \
+  --generic-ssh-key ~/.ssh/appuser \
+  docker-host
+...
+
+$ eval $(docker-machine env docker-host)
+```
+
+Build the application images:
+```
+$ cd src
+
+$ docker build -t vshender/post:1.0 -f Dockerfile.old ./post-py
+...
+Successfully built 8e9049ae34d6
+Successfully tagged vshender/post:1.0
+
+$ docker build -t vshender/comment:1.0 -f Dockerfile.ruby ./comment
+...
+Successfully built 6ba027cfeb81
+Successfully tagged vshender/comment:1.0
+
+$ docker build -t vshender/ui:1.0 -f Dockerfile.ruby ./ui
+...
+Successfully built fc53a1755fe2
+Successfully tagged vshender/ui:1.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED              SIZE
+vshender/ui        1.0            fc53a1755fe2   11 seconds ago       772MB
+vshender/comment   1.0            6ba027cfeb81   About a minute ago   770MB
+vshender/post      1.0            8e9049ae34d6   2 minutes ago        111MB
+ruby               2.2            6c8e6f9667b2   4 years ago          715MB
+python             3.6.0-alpine   cb178ebbf0f2   5 years ago          88.6MB
+```
+
+Run the application:
+```
+$ docker network create reddit
+fd5feff84899137daa764e9cb2a3094a85ea6dace71dfb54718364ab1d1fb802
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    mongo:latest
+Unable to find image 'mongo:latest' locally
+latest: Pulling from library/mongo
+...
+Digest: sha256:82302b06360729842acd27ab8a91c90e244f17e464fcfd366b7427af652c5559
+Status: Downloaded newer image for mongo:latest
+bda52d0c6a16860162e6b2c281ce5e5d03a7d68368e7895484e1972a24f17095
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post \
+    vshender/post:1.0
+3523c4b38f96fe169ccbe7aab75e0cc3ff38d07edfb51b820b94a0770a7aca0a
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment \
+    vshender/comment:1.0
+eaf56f450bf1cf781e1d6cae175918aee6e5f0e59844cdea5e961f2194aaf5a6
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    vshender/ui:1.0
+9ecc25b9e9830c1480279519f62818efc5c93eb13368b9fc2c6751cb6a8b0038
+```
+
+Open http://62.84.119.234:9292/ and test the application.
+
+Run the application containers using different network aliases.
+```
+$ docker kill $(docker ps -q)
+9ecc25b9e983
+eaf56f450bf1
+3523c4b38f96
+bda52d0c6a16
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_database \
+    --network-alias=comment_database \
+    mongo:latest
+ccd828e9f1fcd9c1d01326ab5f78a73301fd9cd251d3b5dfa6c4571a1b31f7b0
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_service \
+    -e POST_DATABASE_HOST=post_database \
+    vshender/post:1.0
+33a8d0b88e3e96ca92159c865f157e3d9ade28619abce046bfe6d7dbb4cfa207
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment_service \
+    -e COMMENT_DATABASE_HOST=comment_database \
+    vshender/comment:1.0
+077c425687b739403cae90c0e8a3e4aef3e8675609369a53e08c5c52ed0b6c80
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    -e POST_SERVICE_HOST=post_service \
+    -e COMMENT_SERVICE_HOST=comment_service \
+    vshender/ui:1.0
+68af4302524ca413be790ba976d75363217f0c77c205869a0cbbab7138d6d3f9
+```
+
+Open http://62.84.119.234:9292/ and test the application.
+
+Optimize the `comment` and `ui` images using an Ubuntu base image and examine the image sizes:
+```
+$ docker build -t vshender/comment:2.0 -f Dockerfile.ubuntu ./comment
+...
+Successfully built a77efba79646
+Successfully tagged vshender/comment:2.0
+
+$ docker build -t vshender/ui:2.0 -f Dockerfile.ubuntu ./ui
+...
+Successfully built 25e1f3b0b53e
+Successfully tagged vshender/ui:2.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED          SIZE
+vshender/ui        2.0            25e1f3b0b53e   10 seconds ago   410MB
+vshender/comment   2.0            a77efba79646   46 seconds ago   407MB
+vshender/ui        1.0            fc53a1755fe2   30 minutes ago   772MB
+vshender/comment   1.0            6ba027cfeb81   31 minutes ago   770MB
+vshender/post      1.0            8e9049ae34d6   32 minutes ago   111MB
+mongo              latest         c8b57c4bf7e3   4 weeks ago      701MB
+ubuntu             16.04          b6f507652425   10 months ago    135MB
+ruby               2.2            6c8e6f9667b2   4 years ago      715MB
+python             3.6.0-alpine   cb178ebbf0f2   5 years ago      88.6MB
+```
+
+Optimize the application images using an Alpine base image:
+```
+$ docker build -t vshender/post:2.0 ./post-py
+...
+Successfully built 9f025b407f1a
+Successfully tagged vshender/post:2.0
+
+$ docker build -t vshender/comment:3.0 ./comment
+...
+Successfully built 62859ed3f3bf
+Successfully tagged vshender/comment:3.0
+
+$ docker build -t vshender/ui:3.0 ./ui
+...
+Successfully built bb8fe4b4093a
+Successfully tagged vshender/ui:3.0
+
+$ docker images
+REPOSITORY         TAG            IMAGE ID       CREATED          SIZE
+vshender/ui        3.0            bb8fe4b4093a   9 seconds ago    71.6MB
+vshender/comment   3.0            62859ed3f3bf   4 minutes ago    69.5MB
+vshender/post      2.0            9f025b407f1a   5 minutes ago    107MB
+vshender/ui        2.0            25e1f3b0b53e   25 minutes ago   410MB
+vshender/comment   2.0            a77efba79646   26 minutes ago   407MB
+vshender/ui        1.0            fc53a1755fe2   56 minutes ago   772MB
+vhsender/comment   1.0            6ba027cfeb81   57 minutes ago   770MB
+vshender/post      1.0            8e9049ae34d6   58 minutes ago   111MB
+...
+```
+
+Use a Docker volume to store MongoDB data:
+```
+$ docker stop $(docker ps -q)
+fdd93a8b764b
+37fa1d2bbf3d
+33a8d0b88e3e
+ccd828e9f1fc
+
+$ docker volume create reddit_db
+reddit_db
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    -v reddit_db:/data/db \
+    mongo:latest
+94862b88ecc864b188468c65729f0c9843f0e7b6e5ba91c5ecbce42a44fe3512
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post \
+    vshender/post:2.0
+5129670cda53b9f1801c4a1af3e8a518cf74bf850562bcb074d866131f1b8e6b
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=comment \
+    vshender/comment:3.0
+9ac3d835180e961cf2e58dc40f24a343f7ce4034273ca448107ea6f137de455e
+
+$ docker run -d \
+    --network=reddit \
+    -p 9292:9292 \
+    vshender/ui:3.0
+393b0942a19c612998f50e8f5424be082c9fe0f51128748eaf3cc6bae0bb7c21
+```
+
+Open http://62.84.119.234:9292/ and create some posts and comments.
+
+Restart a MongoDB container:
+```
+$ docker ps
+CONTAINER ID   IMAGE                  COMMAND                  CREATED         STATUS         PORTS                                       NAMES
+...
+94862b88ecc8   mongo:latest           "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   27017/tcp                                   serene_johnson
+
+$ docker stop 94862b88ecc8
+94862b88ecc8
+
+$ docker run -d \
+    --network=reddit \
+    --network-alias=post_db \
+    --network-alias=comment_db \
+    -v reddit_db:/data/db \
+    mongo:latest
+155c291afafe61b76d70f89f3579f70217394f42f3344a25df0d17b7dec0f350
+```
+
+Open http://62.84.119.234:9292/ and verify that the created data still exists.
+
+Stop the application containers:
+```
+$ docker stop $(docker ps -q)
+155c291afafe
+393b0942a19c
+9ac3d835180e
+5129670cda53
+```
+
+Remove the created bridge network:
+```
+$ docker network rm reddit
+reddit
+```
+
+</details>
