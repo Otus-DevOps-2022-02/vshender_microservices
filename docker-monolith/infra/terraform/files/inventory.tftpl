@@ -1,0 +1,5 @@
+[app]
+
+%{ for app_vm in app_vms ~}
+${ app_vm.name } ansible_host=${ app_vm.network_interface[0].nat_ip_address }
+%{ endfor ~}
