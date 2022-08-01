@@ -1164,6 +1164,7 @@ done (15s)
 ## Homework #20: gitlab-ci-1
 
 - Implemented Gitlab deployment.
+- Added a pipeline definition.
 
 <details><summary>Details</summary>
 
@@ -1206,5 +1207,18 @@ Configure Gitlab:
 Useful links:
 - [GitLab Docker images](https://docs.gitlab.com/ee/install/docker.html)
 - [community.docker.docker_container module --- manage docker containers](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_container_module.html)
+
+Configure a repository for the application:
+1. Go to "+" -> "New group" and create a new private group named "homework".
+2. Create a new project named "example".
+3. Push the application repository:
+```
+$ git remote add gitlab http://84.201.130.130/homework/example.git
+
+$ git push gitlab gitlab-ci-1
+...
+```
+
+Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "pending".
 
 </details>
