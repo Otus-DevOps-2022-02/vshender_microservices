@@ -1158,4 +1158,53 @@ $ yc compute instance delete docker-host
 done (15s)
 ```
 
-</summary>
+</details>
+
+
+## Homework #20: gitlab-ci-1
+
+- Implemented Gitlab deployment.
+
+<details><summary>Details</summary>
+
+Deploy Gitlab:
+```
+$ cd gitlab-ci/infra/terraform
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+gitlab_external_ip = "84.201.130.130"
+
+$ cd ../ansible
+
+$ ansible-playbook playbooks/site.yml
+...
+
+TASK [Show Gitlab password] **************************************************************************************
+ok: [gitlab] => {
+    "msg": "Gitlab credentials for the first login: username: root, password: ..."
+}
+
+PLAY RECAP *******************************************************************************************************
+gitlab                     : ok=8    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Configure Gitlab:
+1. Open http://84.201.130.130/
+2. Login using the provided credentials.
+3. Go to "Edit profile" -> "Password" and change the password, as the file containing the default password will be deleted after 24 hours.
+4. Go to "Menu" -> "Admin" -> "Settings" -> "General" -> "Sign-up restrictions" and disable sign-up.
+
+Useful links:
+- [GitLab Docker images](https://docs.gitlab.com/ee/install/docker.html)
+- [community.docker.docker_container module --- manage docker containers](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_container_module.html)
+
+</details>
