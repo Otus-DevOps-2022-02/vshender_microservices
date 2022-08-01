@@ -1171,6 +1171,7 @@ done (15s)
 - Defined the `review` stage and the `dev` environment.
 - Defined the `staging` and the `production` stages.
 - Restricted the `staging` and the `production` stages to run for tags only.
+- Added dynamic environments for branches.
 
 <details><summary>Details</summary>
 
