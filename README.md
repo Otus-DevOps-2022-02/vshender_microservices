@@ -1172,6 +1172,7 @@ done (15s)
 - Defined the `staging` and the `production` stages.
 - Restricted the `staging` and the `production` stages to run for tags only.
 - Added dynamic environments for branches.
+- Implemented the application container building.
 
 <details><summary>Details</summary>
 
@@ -1280,5 +1281,54 @@ $ git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
 ```
 
 Push the code to the Gitlab repository, then go to "Deployment" -> "Environments" and check environments.
+
+Go to "Settings" -> "CI/CD" -> "Variables" and add the `DOCKER_HUB_LOGIN` and the `DOCKER_HUB_PASSWD` variables needed for the application image building.
+
+Go to "Settigns" -> "CI/CD" -> "Runners" and remove the previously registered runner.
+
+Register a GitLab runner to use the `docker` image and `privileged` mode in order to be able to build Docker images:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker stop gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker rm gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+1cb8f35f7242658d717803861255ee59e949212cfdbe80e47c8cc04ec86434b0
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker exec -it gitlab-runner gitlab-runner register \
+  --url http://84.201.130.130/ \
+  --registration-token ... \
+  --docker-privileged \
+  --non-interactive \
+  --locked=false \
+  --name DockerRunner \
+  --executor docker \
+  --docker-image docker:19.03.1 \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged
+Runtime platform                                    arch=amd64 os=linux pid=29 revision=32fc1585 version=15.2.1
+Running in system-mode.
+
+Registering runner... succeeded                     runner=GR1348941JkFNu6JQ
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+
+Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml"
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Push the code to the Gitlab repository, then go to Docker Hub and check the built application image.
+
+Useful links:
+- [Use Docker to build Docker images](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker)
+- [Update: Changes to GitLab CI/CD and Docker in Docker with Docker 19.03](https://about.gitlab.com/blog/2019/07/31/docker-in-docker-with-docker-19-dot-03/)
 
 </details>

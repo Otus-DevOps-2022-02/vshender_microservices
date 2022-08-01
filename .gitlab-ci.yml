@@ -1,4 +1,4 @@
-image: ruby:2.4.2
+image: docker:19.03.1
 
 stages:
   - build
@@ -9,21 +9,29 @@ stages:
 
 variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ''
+  DOCKER_IMAGE_NAME: $DOCKER_HUB_LOGIN/gitlab-reddit:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
 
 before_script:
   - cd reddit
-  - bundle install
 
 build_job:
   stage: build
+  services:
+    - docker:19.03.1-dind
   script:
-    - echo 'Building'
+    - docker build --tag $DOCKER_IMAGE_NAME .
+    - docker login --username $DOCKER_HUB_LOGIN --password $DOCKER_HUB_PASSWD
+    - docker push $DOCKER_IMAGE_NAME
 
 test_unit_job:
   stage: test
+  image: ruby:2.4.2
   services:
     - mongo:latest
   script:
+    - bundle install
     - ruby simpletest.rb
 
 test_integration_job:
