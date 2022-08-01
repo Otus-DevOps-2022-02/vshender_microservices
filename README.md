@@ -1166,6 +1166,7 @@ done (15s)
 - Implemented Gitlab deployment.
 - Added a pipeline definition.
 - Started and registered a Gitlab runner.
+- Added the application code to the repository.
 
 <details><summary>Details</summary>
 
@@ -1264,5 +1265,13 @@ logout
 ```
 
 Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "passed".
+
+Add the application code to the repository:
+```
+$ cd ../../../
+
+$ git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+...
+```
 
 </details>
