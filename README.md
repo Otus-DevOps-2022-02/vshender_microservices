@@ -1169,6 +1169,7 @@ done (15s)
 - Added the application code to the repository.
 - Added a unit test for the application.
 - Defined the `review` stage and the `dev` environment.
+- Defined the `staging` and the `production` stages.
 
 <details><summary>Details</summary>
 
