@@ -1170,6 +1170,7 @@ done (15s)
 - Added a unit test for the application.
 - Defined the `review` stage and the `dev` environment.
 - Defined the `staging` and the `production` stages.
+- Restricted the `staging` and the `production` stages to run for tags only.
 
 <details><summary>Details</summary>
 
