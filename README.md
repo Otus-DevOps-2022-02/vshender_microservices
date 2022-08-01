@@ -1168,6 +1168,7 @@ done (15s)
 - Started and registered a Gitlab runner.
 - Added the application code to the repository.
 - Added a unit test for the application.
+- Defined the `review` stage and the `dev` environment.
 
 <details><summary>Details</summary>
 
@@ -1274,5 +1275,7 @@ $ cd ../../../
 $ git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
 ...
 ```
+
+Push the code to the Gitlab repository, then go to "Deployment" -> "Environments" and check environments.
 
 </details>
