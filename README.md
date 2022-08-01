@@ -1167,6 +1167,7 @@ done (15s)
 - Added a pipeline definition.
 - Started and registered a Gitlab runner.
 - Added the application code to the repository.
+- Added a unit test for the application.
 
 <details><summary>Details</summary>
 
