@@ -1165,6 +1165,7 @@ done (15s)
 
 - Implemented Gitlab deployment.
 - Added a pipeline definition.
+- Started and registered a Gitlab runner.
 
 <details><summary>Details</summary>
 
@@ -1220,5 +1221,48 @@ $ git push gitlab gitlab-ci-1
 ```
 
 Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "pending".
+
+Go to "Settings" -> "CI/CD" -> "Runners" and get the runners registration token.
+
+Start and register a Gitlab runner:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+Unable to find image 'gitlab/gitlab-runner:latest' locally
+latest: Pulling from gitlab/gitlab-runner
+d7bfe07ed847: Already exists
+fa6bd21be6f6: Pull complete
+d4a2aca7780c: Pull complete
+Digest: sha256:3c00590a96d46655560b6c19b898c2b70a87213b9de48364ae4d426861db807f
+Status: Downloaded newer image for gitlab/gitlab-runner:latest
+59bbae83e03c946cc004a82288865a6475252d4f8d3dfb50934ad86e57f5e3eb
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker exec -it gitlab-runner gitlab-runner register \
+  --url http://84.201.130.130/ \
+  --registration-token ... \
+  --non-interactive \
+  --locked=false \
+  --name DockerRunner \
+  --executor docker \
+  --docker-image alpine:latest \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged
+Runtime platform                                    arch=amd64 os=linux pid=42 revision=32fc1585 version=15.2.1
+Running in system-mode.
+
+Registering runner... succeeded                     runner=GR1348941JkFNu6JQ
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+
+Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml"
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "passed".
 
 </details>
