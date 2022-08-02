@@ -1173,6 +1173,7 @@ done (15s)
 - Restricted the `staging` and the `production` stages to run for tags only.
 - Added dynamic environments for branches.
 - Implemented the application container building.
+- Implemented the application container testing.
 
 <details><summary>Details</summary>
 
