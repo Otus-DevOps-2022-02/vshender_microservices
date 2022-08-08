@@ -2,6 +2,10 @@ variable "service_account_key_file" {
   description = "Path to the Yandex.Cloud service account key file"
 }
 
+variable "service_account_id" {
+  description = "Yandex.Cloud service account ID"
+}
+
 variable "cloud_id" {
   description = "Cloud"
 }
@@ -31,4 +35,9 @@ variable "public_key_path" {
 variable "ansible_inventory" {
   description = "Path to the Ansible inventory file to generate"
   default     = "../ansible/inventory"
+}
+
+variable "bucket_name" {
+  description = "tfstate storage bucket name"
+  default     = "otus-vshender-testenv-tfstate-storage"
 }

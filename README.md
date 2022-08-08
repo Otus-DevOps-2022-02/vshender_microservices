@@ -1174,12 +1174,13 @@ done (15s)
 - Added dynamic environments for branches.
 - Implemented the application container building.
 - Implemented the application container testing.
+- Implemented testing environment creation and the application deployment for review.
 
 <details><summary>Details</summary>
 
 Deploy Gitlab:
 ```
-$ cd gitlab-ci/infra/terraform
+$ cd gitlab-ci/gitlab/infra/terraform
 
 $ terraform init
 ...
@@ -1331,5 +1332,19 @@ Push the code to the Gitlab repository, then go to Docker Hub and check the buil
 Useful links:
 - [Use Docker to build Docker images](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker)
 - [Update: Changes to GitLab CI/CD and Docker in Docker with Docker 19.03](https://about.gitlab.com/blog/2019/07/31/docker-in-docker-with-docker-19-dot-03/)
+
+Create a bucket for the terraform state storage:
+```
+$ cd gitlab-ci/gitlab/infra/terraform
+$ terraform apply -auto-approve
+...
+```
+
+Go to "Settings" -> "CI/CD" -> "Variables" and add the `YC_OAUTH_TOKEN`, `YC_CLOUD_ID`, `YC_FOLDER_ID`, `YC_SUBNET_ID`, `YC_STATE_BUCKET_ACCESS_KEY`, and `YC_STATE_BUCKET_SECRET_KEY` variables needed for testing environments creation.
+
+Push a new branch to the Gitlab repository, then go to "Deployment" -> "Environments" and check the environment created for the branch.
+
+Useful links:
+- [Set dynamic environment URLs after a job finishes](https://docs.gitlab.com/ee/ci/environments/#set-dynamic-environment-urls-after-a-job-finishes)
 
 </details>
