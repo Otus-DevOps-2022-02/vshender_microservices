@@ -1175,6 +1175,7 @@ done (15s)
 - Implemented the application container building.
 - Implemented the application container testing.
 - Implemented testing environment creation and the application deployment for review.
+- Implemented GitLab runners creation.
 
 <details><summary>Details</summary>
 
@@ -1346,5 +1347,31 @@ Push a new branch to the Gitlab repository, then go to "Deployment" -> "Environm
 
 Useful links:
 - [Set dynamic environment URLs after a job finishes](https://docs.gitlab.com/ee/ci/environments/#set-dynamic-environment-urls-after-a-job-finishes)
+
+Go to "Settigns" -> "CI/CD" -> "Runners" and remove the previously registered runner.
+
+Stop the existing GitLab runner:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker stop gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker rm gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Create and register new GitLab runners using Ansible playbook:
+```
+$ cd gitlab-ci/gitlab/infra/ansible
+
+$ ansible-playbook playbooks/site.yml --extra-vars "runner_token=... runners_count=2" --tags create_runners
+...
+PLAY RECAP *******************************************************************************************************
+gitlab                     : ok=2    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
 
 </details>
