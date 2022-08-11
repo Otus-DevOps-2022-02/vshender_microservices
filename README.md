@@ -1385,6 +1385,8 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 ## Homework #22: monitoring-1
 
 - Got acquainted with Prometheus.
+- Built a Prometheus Docker image to monitor the application.
+- Added Prometheus service to the `docker/docker-compose.yml` file.
 
 <details><summary>Details</summary>
 
@@ -1463,5 +1465,42 @@ Stop Prometheus:
 $ docker stop prometheus
 prometheus
 ```
+
+Build a Prometheus Docker image to monitor the application:
+```
+$ cd monitoring/prometheus
+$ export USERNAME=vshender
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Build the application microservice images:
+```
+$ cd ../../
+
+$ for srv in ui post-py comment; do cd src/$srv; USER_NAME=$USERNAME bash docker_build.sh; cd -; done
+...
+```
+
+Run the application:
+```
+$ cd docker
+
+$ cp .env.example .env
+
+$ docker-compose up -d
+[+] Running 7/7
+ ⠿ Network docker_front_net       Created                                   0.1s
+ ⠿ Network docker_back_net        Created                                   0.1s
+ ⠿ Container docker-db-1          Started                                   2.3s
+ ⠿ Container docker-post-1        Started                                   3.8s
+ ⠿ Container docker-ui-1          Started                                   3.4s
+ ⠿ Container docker-comment-1     Started                                   4.7s
+ ⠿ Container docker-prometheus-1  Started
+...
+```
+
+- Open http://51.250.93.5:9292/ and check the application.
+- Open http://51.250.93.5:9090/ adn check the Prometheus.
 
 </details>
