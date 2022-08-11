@@ -372,7 +372,7 @@ $ docker run --rm --pid host -ti tehbilly/htop
 
 Build the application image and run it:
 ```
-$ cd docker-monolith
+$ cd docker/docker-monolith
 
 $ docker build -t reddit:latest .
 Sending build context to Docker daemon  18.94kB
