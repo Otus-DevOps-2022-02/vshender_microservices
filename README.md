@@ -1380,3 +1380,88 @@ Go to "Settings" -> "Integrations" -> "Slack notifications" and configure Slack 
 You can check GitLab notifications [here](https://devops-team-otus.slack.com/archives/GSFU43CHG).
 
 </details>
+
+
+## Homework #22: monitoring-1
+
+- Got acquainted with Prometheus.
+
+<details><summary>Details</summary>
+
+Create a Docker machine on a Yandex.Cloud VM:
+```
+$ yc compute instance create \
+    --name docker-host \
+    --zone ru-central1-a \
+    --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+    --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+    --ssh-key ~/.ssh/appuser.pub
+done (21s)
+id: fhmhfgr7hb4c9hepr9d3
+...
+network_interfaces:
+  - index: "0"
+    mac_address: d0:0d:11:7c:36:78
+    subnet_id: e9bqom95bd1o3fkemarr
+    primary_v4_address:
+      address: 10.128.0.4
+      one_to_one_nat:
+        address: 51.250.93.5
+        ip_version: IPV4
+...
+
+$ docker-machine create \
+    --driver generic \
+    --generic-ip-address=51.250.93.5 \
+    --generic-ssh-user yc-user \
+    --generic-ssh-key ~/.ssh/appuser \
+    docker-host
+Running pre-create checks...
+Creating machine...
+(docker-host) Importing SSH key...
+Waiting for machine to be running, this may take a few minutes...
+Detecting operating system of created instance...
+Waiting for SSH to be available...
+Detecting the provisioner...
+Provisioning with ubuntu(systemd)...
+Installing Docker...
+Copying certs to the local machine directory...
+Copying certs to the remote machine...
+Setting Docker configuration on the remote daemon...
+Checking connection to Docker...
+Docker is up and running!
+To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: docker-machine env docker-host
+
+$ docker-machine ls
+NAME          ACTIVE   DRIVER    STATE     URL                      SWARM   DOCKER      ERRORS
+docker-host   *        generic   Running   tcp://51.250.93.5:2376           v20.10.17
+
+$ docker-machine ip docker-host
+51.250.93.5
+
+$ eval $(docker-machine env docker-host)
+```
+
+Run Prometheus:
+```
+$ docker run --name prometheus --rm -d -p 9090:9090 prom/prometheus
+Unable to find image 'prom/prometheus:latest' locally
+latest: Pulling from prom/prometheus
+...
+Status: Downloaded newer image for prom/prometheus:latest
+8086c215b74860d75273a383d694d65525df1a3674c2d8ac88ee852e4c27b03b
+
+$ docker ps
+CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS          PORTS                                       NAMES
+8086c215b748   prom/prometheus   "/bin/prometheus --c…"   15 seconds ago   Up 12 seconds   0.0.0.0:9090->9090/tcp, :::9090->9090/tcp   prometheus
+```
+
+Open http://51.250.93.5:9090/ and get acquainted with Prometheus.
+
+Stop Prometheus:
+```
+$ docker stop prometheus
+prometheus
+```
+
+</details>
