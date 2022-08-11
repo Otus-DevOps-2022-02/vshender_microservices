@@ -1176,6 +1176,7 @@ done (15s)
 - Implemented the application container testing.
 - Implemented testing environment creation and the application deployment for review.
 - Implemented GitLab runners creation.
+- Configured GitLab integration with Slack.
 
 <details><summary>Details</summary>
 
@@ -1373,5 +1374,9 @@ $ ansible-playbook playbooks/site.yml --extra-vars "runner_token=... runners_cou
 PLAY RECAP *******************************************************************************************************
 gitlab                     : ok=2    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ```
+
+Go to "Settings" -> "Integrations" -> "Slack notifications" and configure Slack integration.
+
+You can check GitLab notifications [here](https://devops-team-otus.slack.com/archives/GSFU43CHG).
 
 </details>
