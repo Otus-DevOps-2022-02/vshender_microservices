@@ -1390,6 +1390,7 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 - Added [node-exporter](https://github.com/prometheus/node_exporter) for host machine monitoring.
 - Pushed the created application images to DockerHub.
 - Implemented MongoDB monitoring using [mongodb-exporter](https://github.com/percona/mongodb_exporter).
+- Implemented Blackbox monitoring using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter).
 
 <details><summary>Details</summary>
 
@@ -1613,5 +1614,53 @@ $ docker-compose up -d
 ```
 
 Open http://51.250.93.5:9090/targets and check the mongodb-exporter target.
+
+Build the blackbox-exporter image:
+```
+$ cd ../monitoring/blackbox
+
+$ docker build -t $USERNAME/blackbox-exporter .
+...
+```
+
+Rebuild the Prometheus Docker image with the blackbox-exporter configuration added:
+```
+$ cd ../prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 9/9
+ ⠿ Container docker-db-1                Removed                             1.5s
+ ⠿ Container docker-ui-1                Removed                             1.2s
+ ⠿ Container docker-post-1              Removed                             2.1s
+ ⠿ Container docker-comment-1           Removed                             2.1s
+ ⠿ Container docker-node-exporter-1     Removed                             1.1s
+ ⠿ Container docker-prometheus-1        Removed                             1.8s
+ ⠿ Container docker-mongodb-exporter-1  Removed                             1.0s
+ ⠿ Network docker_front_net             Removed                             0.1s
+ ⠿ Network docker_back_net              Removed                             0.1s
+
+$ docker-compose up -d
+[+] Running 10/10
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Network docker_front_net              Created                            0.3s
+ ⠿ Container docker-db-1                 Started                            2.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            2.6s
+ ⠿ Container docker-ui-1                 Started                            4.8s
+ ⠿ Container docker-post-1               Started                            4.3s
+ ⠿ Container docker-comment-1            Started                            5.6s
+ ⠿ Container docker-prometheus-1         Started                            3.5s
+ ⠿ Container docker-node-exporter-1      Started                            3.0s
+ ⠿ Container docker-mongodb-exporter-1   Started                            6.6s
+```
+
+Open http://51.250.93.5:9090/targets and check the blackbox-exporter target.
 
 </details>
