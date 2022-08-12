@@ -1389,6 +1389,7 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 - Added Prometheus service to the `docker/docker-compose.yml` file.
 - Added [node-exporter](https://github.com/prometheus/node_exporter) for host machine monitoring.
 - Pushed the created application images to DockerHub.
+- Implemented MongoDB monitoring using [mongodb-exporter](https://github.com/percona/mongodb_exporter).
 
 <details><summary>Details</summary>
 
@@ -1567,5 +1568,50 @@ $ for image in ui comment post prometheus; do docker push $USERNAME/$image; done
 ```
 
 DockerHub profile: https://hub.docker.com/u/vshender.
+
+Build the mongodb-exporter image:
+```
+$ cd ../monitoring/mongodb
+
+$ docker build -t $USERNAME/mongodb-exporter .
+...
+```
+
+Rebuild the Prometheus Docker image with the mongodb-exporter configuration added:
+```
+$ cd ../prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 8/8
+ ⠿ Container docker-comment-1        Removed                                1.9s
+ ⠿ Container docker-prometheus-1     Removed                                2.5s
+ ⠿ Container docker-post-1           Removed                                2.4s
+ ⠿ Container docker-node-exporter-1  Removed                                1.9s
+ ⠿ Container docker-db-1             Removed                                1.7s
+ ⠿ Container docker-ui-1             Removed                                2.5s
+ ⠿ Network docker_front_net          Removed                                0.1s
+
+$ docker-compose up -d
+[+] Running 9/9
+ ⠿ Network docker_back_net              Created                             0.1s
+ ⠿ Network docker_front_net             Created                             0.1s
+ ⠿ Container docker-ui-1                Started                             3.0s
+ ⠿ Container docker-prometheus-1        Started                             3.2s
+ ⠿ Container docker-db-1                Started                             4.8s
+ ⠿ Container docker-node-exporter-1     Started                             3.4s
+ ⠿ Container docker-post-1              Started                             6.6s
+ ⠿ Container docker-comment-1           Started                             5.5s
+ ⠿ Container docker-mongodb-exporter-1  Started                             4.2s
+```
+
+Open http://51.250.93.5:9090/targets and check the mongodb-exporter target.
 
 </details>
