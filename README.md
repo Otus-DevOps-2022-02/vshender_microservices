@@ -1387,6 +1387,7 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 - Got acquainted with Prometheus.
 - Built a Prometheus Docker image to monitor the application.
 - Added Prometheus service to the `docker/docker-compose.yml` file.
+- Added [node-exporter](https://github.com/prometheus/node_exporter) for host machine monitoring.
 
 <details><summary>Details</summary>
 
@@ -1502,5 +1503,54 @@ $ docker-compose up -d
 
 - Open http://51.250.93.5:9292/ and check the application.
 - Open http://51.250.93.5:9090/ adn check the Prometheus.
+
+Rebuild the Prometheus Docker image with the node-exporter configuration added:
+```
+$ cd ../monitoring/prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 7/7
+ ⠿ Container docker-post-1        Removed                                   2.9s
+ ⠿ Container docker-prometheus-1  Removed                                   3.0s
+ ⠿ Container docker-ui-1          Removed                                   2.3s
+ ⠿ Container docker-db-1          Removed                                   2.1s
+ ⠿ Container docker-comment-1     Removed                                   3.0s
+ ⠿ Network docker_front_net       Removed                                   0.1s
+ ⠿ Network docker_back_net        Removed                                   0.1s
+
+$ docker-compose up -d
+[+] Running 8/8
+ ⠿ Network docker_back_net           Created                                0.1s
+ ⠿ Network docker_front_net          Created                                0.1s
+ ⠿ Container docker-db-1             Started                                3.0s
+ ⠿ Container docker-post-1           Started                                4.9s
+ ⠿ Container docker-node-exporter-1  Started                                2.2s
+ ⠿ Container docker-comment-1        Started                                3.7s
+ ⠿ Container docker-ui-1             Started                                4.1s
+ ⠿ Container docker-prometheus-1     Started                                2.7s
+```
+
+- Open http://51.250.93.5:9090/targets and check the node-exporter target.
+- Check the `node_load1` metric: http://51.250.93.5:9090/graph?g0.range_input=1h&g0.expr=node_load1&g0.tab=0.
+- Add load:
+
+  ```
+  $ docker-machine ssh docker-host
+  ...
+  yc-user@docker-host:~$ yes > /dev/null
+  ^C
+
+  yc-user@docker-host:~$ exit
+  logout
+  ```
+- Check the `node_load1` metric again.
 
 </details>
