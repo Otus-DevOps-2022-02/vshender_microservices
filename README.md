@@ -1391,6 +1391,7 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 - Pushed the created application images to DockerHub.
 - Implemented MongoDB monitoring using [mongodb-exporter](https://github.com/percona/mongodb_exporter).
 - Implemented Blackbox monitoring using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter).
+- Added `Makefile` to automate various actions.
 
 <details><summary>Details</summary>
 
@@ -1662,5 +1663,17 @@ $ docker-compose up -d
 ```
 
 Open http://51.250.93.5:9090/targets and check the blackbox-exporter target.
+
+Destroy the Docker machine:
+```
+$ docker-machine rm docker-host
+About to remove docker-host
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed docker-host
+
+$ yc compute instance delete docker-host
+done (14s)
+```
 
 </details>
