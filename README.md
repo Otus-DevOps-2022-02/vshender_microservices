@@ -1388,6 +1388,7 @@ You can check GitLab notifications [here](https://devops-team-otus.slack.com/arc
 - Built a Prometheus Docker image to monitor the application.
 - Added Prometheus service to the `docker/docker-compose.yml` file.
 - Added [node-exporter](https://github.com/prometheus/node_exporter) for host machine monitoring.
+- Pushed the created application images to DockerHub.
 
 <details><summary>Details</summary>
 
@@ -1552,5 +1553,19 @@ $ docker-compose up -d
   logout
   ```
 - Check the `node_load1` metric again.
+
+Push the created application images to DockerHub:
+```
+$ docker login
+Authenticating with existing credentials...
+Login Succeeded
+
+...
+
+$ for image in ui comment post prometheus; do docker push $USERNAME/$image; done
+...
+```
+
+DockerHub profile: https://hub.docker.com/u/vshender.
 
 </details>
