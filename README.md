@@ -1684,6 +1684,7 @@ done (14s)
 - Updated the application code.
 - Created a Docker machine on a Yandex.Cloud VM.
 - Built a fluentd image.
+- Ran the application using the updated application images.
 
 <details><summary>Details</summary>
 
@@ -1746,6 +1747,37 @@ $ docker build -t $USERNAME/fluentd .
 ...
 Successfully built 4e485cf07051
 Successfully tagged vshender/fluentd:latest
+```
+
+Run the application and look at the `post` microservice logs:
+```
+$ cd ../../docker
+
+$ docker-compose up -d
+[+] Running 12/12
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Network docker_front_net              Created                            0.1s
+ ⠿ Volume "docker_post_db"               Created                            0.0s
+ ⠿ Volume "docker_prometheus_data"       Created                            0.0s
+ ⠿ Container docker-comment-1            Started                            7.4s
+ ⠿ Container docker-db-1                 Started                            7.9s
+ ⠿ Container docker-post-1               Started                            6.7s
+ ⠿ Container docker-node-exporter-1      Started                            8.7s
+ ⠿ Container docker-ui-1                 Started                            7.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            5.4s
+ ⠿ Container docker-mongodb-exporter-1   Started                            6.3s
+ ⠿ Container docker-prometheus-1         Started                            9.2s
+
+$ docker-compose logs -f post
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": null, "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:39:45"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": null, "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:39:50"}
+...
+docker-post-1  | {"event": "find_all_posts", "level": "info", "message": "Successfully retrieved all posts from the database", "params": {}, "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "service": "post", "timestamp": "2022-08-13 09:40:14"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/posts?", "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:40:14"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:40:15"}
+...
+docker-post-1  | {"event": "post_create", "level": "info", "message": "Successfully created a new post", "params": {"link": "https://pandadoc.com", "title": "PandaDoc"}, "request_id": "387f5fd6-9982-4dd9-a3ad-fdc6a42dd7af", "service": "post", "timestamp": "2022-08-13 09:40:53"}
+...
 ```
 
 </details>
