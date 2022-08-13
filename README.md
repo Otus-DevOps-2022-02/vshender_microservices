@@ -1690,6 +1690,7 @@ done (14s)
 - Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `ui` microservice.
 - Added fluentd filter in order to parse unstructured `ui` logs.
 - Used grok patterns for unstructured `ui` logs parsing.
+- Implemented tracing using Zipkin.
 
 <details><summary>Details</summary>
 
@@ -1909,5 +1910,43 @@ $ docker-compose -f docker-compose-logging.yml up -d fluentd
 
 Useful links:
 - [Grok Parser for Fluentd](https://www.rubydoc.info/gems/fluent-plugin-grok-parser)
+
+Restart the logging infrastructure and the application in order to enable tracing:
+```
+$ docker-compose -f docker-compose-logging.yml up -d
+[+] Running 13/13
+ ⠿ zipkin Pulled                                                           10.8s
+   ⠿ 24f0c933cbef Pull complete                                             0.9s
+   ⠿ 69e2f037cdb3 Pull complete                                             1.6s
+   ⠿ 1a3f070d750b Pull complete                                             2.0s
+   ⠿ 3e010093287c Pull complete                                             2.4s
+   ⠿ 7df9dcce0a60 Pull complete                                             2.6s
+   ⠿ 824016db13c8 Pull complete                                             2.9s
+   ⠿ fd2668db6e0d Pull complete                                             3.0s
+   ⠿ 6453a70a5672 Pull complete                                             5.2s
+   ⠿ 71ee7774b52d Pull complete                                             5.7s
+   ⠿ 89855adca250 Pull complete                                             5.9s
+   ⠿ fa57359ed425 Pull complete                                             7.8s
+   ⠿ 092e376cad15 Pull complete                                             7.9s
+[+] Running 4/4
+ ⠿ Container docker-zipkin-1         Started                                2.7s
+ ⠿ Container docker-kibana-1         Running                                0.0s
+ ⠿ Container docker-elasticsearch-1  Running                                0.0s
+ ⠿ Container docker-fluentd-1        Running                                0.0s
+
+$ docker-compose up -d
+[+] Running 8/8
+ ⠿ Container docker-db-1                 Running                            0.0s
+ ⠿ Container docker-mongodb-exporter-1   Running                            0.0s
+ ⠿ Container docker-blackbox-exporter-1  Running                            0.0s
+ ⠿ Container docker-prometheus-1         Running                            0.0s
+ ⠿ Container docker-node-exporter-1      Running                            0.0s
+ ⠿ Container docker-ui-1                 Started                            8.6s
+ ⠿ Container docker-comment-1            Started                            9.6s
+ ⠿ Container docker-post-1               Started                           10.6s
+```
+
+- Open http://51.250.92.236:9292/ and refresh the page several times.
+- Open http://51.250.92.236:9411/ and look at traces.
 
 </details>

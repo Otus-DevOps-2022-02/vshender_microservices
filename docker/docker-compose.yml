@@ -12,6 +12,8 @@ services:
           - comment_db
   ui:
     image: ${USERNAME}/ui:${UI_VER}
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
     ports:
       - ${APP_HOST_PORT}:9292/tcp
     networks:
@@ -24,6 +26,8 @@ services:
 
   post:
     image: ${USERNAME}/post:${POST_VER}
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
     networks:
       - back_net
       - front_net
@@ -35,6 +39,8 @@ services:
 
   comment:
     image: ${USERNAME}/comment:${COMMENT_VER}
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
     networks:
       - back_net
       - front_net
