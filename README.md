@@ -1682,6 +1682,7 @@ done (14s)
 ## Homework #25: logging-1
 
 - Updated the application code.
+- Created a Docker machine on a Yandex.Cloud VM.
 
 <details><summary>Details</summary>
 
@@ -1699,6 +1700,41 @@ vshender/ui                  logging                10402a268405   8 minutes ago
 
 $ make push
 ...
+```
+
+Create a Docker machine on a Yandex.Cloud VM:
+```
+$ yc compute instance create \
+  --name logging \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+  --memory 4 \
+  --ssh-key ~/.ssh/appuser.pub
+done (18s)
+id: fhmrfnngep220ofl957l
+...
+    one_to_one_nat:
+      address: 51.250.92.236
+      ip_version: IPV4
+...
+
+$ docker-machine create \
+  --driver generic \
+  --generic-ip-address=51.250.92.236 \
+  --generic-ssh-user yc-user \
+  --generic-ssh-key ~/.ssh/appuser \
+  logging
+...
+
+$ docker-machine ls
+NAME      ACTIVE   DRIVER    STATE     URL                        SWARM   DOCKER      ERRORS
+logging   -        generic   Running   tcp://51.250.92.236:2376           v20.10.17
+
+$ docker-machine ip logging
+51.250.92.236
+
+$ eval $(docker-machine env docker-host)
 ```
 
 </details>
