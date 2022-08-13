@@ -1687,6 +1687,7 @@ done (14s)
 - Ran the application using the updated application images.
 - Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `post` microservice.
 - Added fluentd filter in order to parse `log` field of `post` logs.
+- Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `ui` microservice.
 
 <details><summary>Details</summary>
 
@@ -1860,5 +1861,14 @@ $ docker-compose -f docker-compose-logging.yml up -d fluentd
 - Open http://51.250.92.236:9292/ and create several posts in order to produce some logs.
 - Open http://51.250.92.236:5601/, go to "Discover", and look at the logs.
 - Now you can filter, for example, by event type: "event: post_create".
+
+Restart the `ui` microservice:
+```
+$ docker-compose up -d
+...
+```
+
+- Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", enter the "container_name: *ui*" query, and check that log messages from `ui` are unstructured.
 
 </details>
