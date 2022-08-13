@@ -1685,6 +1685,7 @@ done (14s)
 - Created a Docker machine on a Yandex.Cloud VM.
 - Built a fluentd image.
 - Ran the application using the updated application images.
+- Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `post` microservice.
 
 <details><summary>Details</summary>
 
@@ -1779,5 +1780,66 @@ docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "
 docker-post-1  | {"event": "post_create", "level": "info", "message": "Successfully created a new post", "params": {"link": "https://pandadoc.com", "title": "PandaDoc"}, "request_id": "387f5fd6-9982-4dd9-a3ad-fdc6a42dd7af", "service": "post", "timestamp": "2022-08-13 09:40:53"}
 ...
 ```
+
+Run the logging infrastructure and restart the application in order to send `post` logs to fluentd:
+```
+$ docker-compose -f docker-compose-logging.yml up -d
+[+] Running 18/18
+ ⠿ kibana Pulled                                                           55.5s
+   ⠿ d8d02d457314 Pull complete                                             7.6s
+   ⠿ a2a6340cc578 Pull complete                                            15.9s
+   ⠿ bee982052bff Pull complete                                            17.2s
+   ⠿ ee697e306b93 Pull complete                                            17.8s
+   ⠿ 1b9dfb8cf65d Pull complete                                            49.5s
+   ⠿ bf2fd386ca4c Pull complete                                            49.6s
+   ⠿ 09854d164e14 Pull complete                                            49.7s
+   ⠿ 57db629d98b8 Pull complete                                            49.8s
+   ⠿ 3de4bbd85ab2 Pull complete                                            49.9s
+   ⠿ 9503e61c9325 Pull complete                                            51.4s
+ ⠿ elasticsearch Pulled                                                    38.3s
+   ⠿ a0fe4757966a Pull complete                                            16.6s
+   ⠿ af323c430ce5 Pull complete                                            17.7s
+   ⠿ 2a71ef3bd98b Pull complete                                            34.5s
+   ⠿ 1e56fdd350c5 Pull complete                                            34.7s
+   ⠿ 16d320661b98 Pull complete                                            35.4s
+[+] Running 0/0
+[+] Running 4/4er_default  Creating                                         0.0s
+ ⠿ Network docker_default            Created                                0.1s
+ ⠿ Container docker-elasticsearch-1  Started                                4.3s
+ ⠿ Container docker-kibana-1         Started                                3.5s
+ ⠿ Container docker-fluentd-1        Started                                4.6s
+
+$ docker-compose down
+[+] Running 10/10
+ ⠿ Container docker-blackbox-exporter-1  Removed                            1.6s
+ ⠿ Container docker-db-1                 Removed                            1.7s
+ ⠿ Container docker-prometheus-1         Removed                            2.3s
+ ⠿ Container docker-ui-1                 Removed                            1.2s
+ ⠿ Container docker-post-1               Removed                            2.4s
+ ⠿ Container docker-node-exporter-1      Removed                            1.7s
+ ⠿ Container docker-mongodb-exporter-1   Removed                            1.6s
+ ⠿ Container docker-comment-1            Removed                            2.4s
+ ⠿ Network docker_back_net               Removed                            0.1s
+ ⠿ Network docker_front_net              Removed                            0.1s
+
+$ docker-compose up -d
+[+] Running 10/10_front_net  Created                                        0.1s
+ ⠿ Network docker_front_net              Created                            0.1s
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Container docker-comment-1            Started                            4.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            6.0s
+ ⠿ Container docker-node-exporter-1      Started                            3.3s
+ ⠿ Container docker-mongodb-exporter-1   Started                            2.4s
+ ⠿ Container docker-ui-1                 Started                            3.9s
+ ⠿ Container docker-prometheus-1         Started                            5.1s
+ ⠿ Container docker-db-1                 Started                            3.0s
+ ⠿ Container docker-post-1               Started                            5.6s
+```
+
+- Open http://51.250.92.236:9292/ and create several posts in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover" -> "Index Patterns", and click "Create index pattern".
+- Enter "fluentd-* in the "Index pattern name" field and click "Next step".
+- Set "@timestamp" as a value of the "Time field" and click "Create index pattern".
+- Go to "Discover" and look at logs.
 
 </details>
