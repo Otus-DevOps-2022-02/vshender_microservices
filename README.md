@@ -1686,6 +1686,7 @@ done (14s)
 - Built a fluentd image.
 - Ran the application using the updated application images.
 - Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `post` microservice.
+- Added fluentd filter in order to parse `log` field of `post` logs.
 
 <details><summary>Details</summary>
 
@@ -1841,5 +1842,23 @@ $ docker-compose up -d
 - Enter "fluentd-* in the "Index pattern name" field and click "Next step".
 - Set "@timestamp" as a value of the "Time field" and click "Create index pattern".
 - Go to "Discover" and look at logs.
+
+Rebuild the fluentd image and restart fluentd:
+```
+$ cd ../logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+
+$ cd ../../docker
+
+$ docker-compose -f docker-compose-logging.yml up -d fluentd
+[+] Running 1/1
+ ⠿ Container docker-fluentd-1  Started                                      3.9s
+```
+
+- Open http://51.250.92.236:9292/ and create several posts in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", and look at the logs.
+- Now you can filter, for example, by event type: "event: post_create".
 
 </details>
