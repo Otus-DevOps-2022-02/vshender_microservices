@@ -1683,6 +1683,7 @@ done (14s)
 
 - Updated the application code.
 - Created a Docker machine on a Yandex.Cloud VM.
+- Built a fluentd image.
 
 <details><summary>Details</summary>
 
@@ -1735,6 +1736,16 @@ $ docker-machine ip logging
 51.250.92.236
 
 $ eval $(docker-machine env docker-host)
+```
+
+Build a fluentd image:
+```
+$ cd logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+Successfully built 4e485cf07051
+Successfully tagged vshender/fluentd:latest
 ```
 
 </details>

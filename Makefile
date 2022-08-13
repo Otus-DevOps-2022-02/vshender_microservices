@@ -1,8 +1,8 @@
 USERNAME = vshender
 
 .PHONY: all up down build docker_login \
-	build_ui build_comment build_post build_prometheus build_mongodb_exporter build_blackbox_exporter \
-	push_ui push_comment push_post push_prometheus push_mongodb_exporter push_blackbox_exporter
+	build_ui build_comment build_post build_prometheus build_mongodb_exporter build_blackbox_exporter build_fluentd \
+	push_ui push_comment push_post push_prometheus push_mongodb_exporter push_blackbox_exporter push_fluentd
 
 
 all: build
@@ -15,7 +15,7 @@ down:
 	cd docker && docker-compose down
 
 
-build: build_ui build_comment build_post build_prometheus build_mongodb_exporter build_blackbox_exporter
+build: build_ui build_comment build_post build_prometheus build_mongodb_exporter build_blackbox_exporter build_fluentd
 
 build_ui:
 	cd src/ui && USER_NAME=${USERNAME} bash docker_build.sh
@@ -35,12 +35,15 @@ build_mongodb_exporter:
 build_blackbox_exporter:
 	cd monitoring/blackbox && docker build -t ${USERNAME}/blackbox-exporter .
 
+build_fluentd:
+	cd logging/fluentd && docker build -t ${USERNAME}/fluentd .
+
 
 docker_login:
 	docker login
 
 
-push: push_ui push_comment push_post push_prometheus push_mongodb_exporter push_blackbox_exporter
+push: push_ui push_comment push_post push_prometheus push_mongodb_exporter push_blackbox_exporter push_fluentd
 
 push_ui: docker_login
 	docker push ${USERNAME}/ui
@@ -59,3 +62,6 @@ push_mongodb_exporter: docker_login
 
 push_blackbox_exporter: docker_login
 	docker push ${USERNAME}/blackbox-exporter
+
+push_fluentd: docker_login
+	docker push ${USERNAME}/fluentd
