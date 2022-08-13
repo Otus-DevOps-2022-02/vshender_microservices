@@ -1691,6 +1691,7 @@ done (14s)
 - Added fluentd filter in order to parse unstructured `ui` logs.
 - Used grok patterns for unstructured `ui` logs parsing.
 - Implemented tracing using Zipkin.
+- Analyzed the [bugged application](https://github.com/Artemmkin/bugged-code) using Zipkin.  The `find_post` method of the `post` microservice contains a `time.sleep` call.
 
 <details><summary>Details</summary>
 
@@ -1948,5 +1949,17 @@ $ docker-compose up -d
 
 - Open http://51.250.92.236:9292/ and refresh the page several times.
 - Open http://51.250.92.236:9411/ and look at traces.
+
+Destroy the Docker machine:
+```
+$ docker-machine rm logging
+About to remove logging
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed logging
+
+$ yc compute instance delete logging
+done (26s)
+```
 
 </details>
