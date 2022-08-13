@@ -1689,6 +1689,7 @@ done (14s)
 - Added fluentd filter in order to parse `log` field of `post` logs.
 - Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `ui` microservice.
 - Added fluentd filter in order to parse unstructured `ui` logs.
+- Used grok patterns for unstructured `ui` logs parsing.
 
 <details><summary>Details</summary>
 
@@ -1888,5 +1889,25 @@ $ docker-compose -f docker-compose-logging.yml up -d fluentd
 
 - Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
 - Open http://51.250.92.236:5601/, go to "Discover", enter the "@log_name: service.ui" query, and check that log messages from `ui` are now structured.
+
+Rebuild the fluentd image and restart fluentd:
+```
+$ cd ../logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+
+$ cd ../../docker
+
+$ docker-compose -f docker-compose-logging.yml up -d fluentd
+[+] Running 1/1
+ ⠿ Container docker-fluentd-1  Started                                      4.5s
+```
+
+- Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", and check that grok pattens parse logs properly.
+
+Useful links:
+- [Grok Parser for Fluentd](https://www.rubydoc.info/gems/fluent-plugin-grok-parser)
 
 </details>
