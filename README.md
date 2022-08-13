@@ -1677,3 +1677,28 @@ done (14s)
 ```
 
 </details>
+
+
+## Homework #25: logging-1
+
+- Updated the application code.
+
+<details><summary>Details</summary>
+
+Build the application images with the updated code and push them to DockerHub:
+```
+$ make build
+...
+
+$ docker images
+REPOSITORY                   TAG                    IMAGE ID       CREATED              SIZE
+vshender/post                logging                7c6673f5424f   About a minute ago   107MB
+vshender/comment             logging                5d35a3a0218d   5 minutes ago        67.4MB
+vshender/ui                  logging                10402a268405   8 minutes ago        67.3MB
+...
+
+$ make push
+...
+```
+
+</details>
