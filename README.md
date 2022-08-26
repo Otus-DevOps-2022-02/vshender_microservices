@@ -1677,3 +1677,289 @@ done (14s)
 ```
 
 </details>
+
+
+## Homework #25: logging-1
+
+- Updated the application code.
+- Created a Docker machine on a Yandex.Cloud VM.
+- Built a fluentd image.
+- Ran the application using the updated application images.
+- Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `post` microservice.
+- Added fluentd filter in order to parse `log` field of `post` logs.
+- Used [fluentd](https://docs.docker.com/config/containers/logging/fluentd/) logging driver for the `ui` microservice.
+- Added fluentd filter in order to parse unstructured `ui` logs.
+- Used grok patterns for unstructured `ui` logs parsing.
+- Implemented tracing using Zipkin.
+- Analyzed the [bugged application](https://github.com/Artemmkin/bugged-code) using Zipkin.  The `find_post` method of the `post` microservice contains a `time.sleep` call.
+
+<details><summary>Details</summary>
+
+Build the application images with the updated code and push them to DockerHub:
+```
+$ make build
+...
+
+$ docker images
+REPOSITORY                   TAG                    IMAGE ID       CREATED              SIZE
+vshender/post                logging                7c6673f5424f   About a minute ago   107MB
+vshender/comment             logging                5d35a3a0218d   5 minutes ago        67.4MB
+vshender/ui                  logging                10402a268405   8 minutes ago        67.3MB
+...
+
+$ make push
+...
+```
+
+Create a Docker machine on a Yandex.Cloud VM:
+```
+$ yc compute instance create \
+  --name logging \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+  --memory 4 \
+  --ssh-key ~/.ssh/appuser.pub
+done (18s)
+id: fhmrfnngep220ofl957l
+...
+    one_to_one_nat:
+      address: 51.250.92.236
+      ip_version: IPV4
+...
+
+$ docker-machine create \
+  --driver generic \
+  --generic-ip-address=51.250.92.236 \
+  --generic-ssh-user yc-user \
+  --generic-ssh-key ~/.ssh/appuser \
+  logging
+...
+
+$ docker-machine ls
+NAME      ACTIVE   DRIVER    STATE     URL                        SWARM   DOCKER      ERRORS
+logging   -        generic   Running   tcp://51.250.92.236:2376           v20.10.17
+
+$ docker-machine ip logging
+51.250.92.236
+
+$ eval $(docker-machine env docker-host)
+```
+
+Build a fluentd image:
+```
+$ cd logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+Successfully built 4e485cf07051
+Successfully tagged vshender/fluentd:latest
+```
+
+Run the application and look at the `post` microservice logs:
+```
+$ cd ../../docker
+
+$ docker-compose up -d
+[+] Running 12/12
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Network docker_front_net              Created                            0.1s
+ ⠿ Volume "docker_post_db"               Created                            0.0s
+ ⠿ Volume "docker_prometheus_data"       Created                            0.0s
+ ⠿ Container docker-comment-1            Started                            7.4s
+ ⠿ Container docker-db-1                 Started                            7.9s
+ ⠿ Container docker-post-1               Started                            6.7s
+ ⠿ Container docker-node-exporter-1      Started                            8.7s
+ ⠿ Container docker-ui-1                 Started                            7.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            5.4s
+ ⠿ Container docker-mongodb-exporter-1   Started                            6.3s
+ ⠿ Container docker-prometheus-1         Started                            9.2s
+
+$ docker-compose logs -f post
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": null, "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:39:45"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": null, "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:39:50"}
+...
+docker-post-1  | {"event": "find_all_posts", "level": "info", "message": "Successfully retrieved all posts from the database", "params": {}, "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "service": "post", "timestamp": "2022-08-13 09:40:14"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/posts?", "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:40:14"}
+docker-post-1  | {"addr": "192.168.80.3", "event": "request", "level": "info", "method": "GET", "path": "/healthcheck?", "request_id": "d340ecb8-ecef-4bf5-8cb3-df631a77562b", "response_status": 200, "service": "post", "timestamp": "2022-08-13 09:40:15"}
+...
+docker-post-1  | {"event": "post_create", "level": "info", "message": "Successfully created a new post", "params": {"link": "https://pandadoc.com", "title": "PandaDoc"}, "request_id": "387f5fd6-9982-4dd9-a3ad-fdc6a42dd7af", "service": "post", "timestamp": "2022-08-13 09:40:53"}
+...
+```
+
+Run the logging infrastructure and restart the application in order to send `post` logs to fluentd:
+```
+$ docker-compose -f docker-compose-logging.yml up -d
+[+] Running 18/18
+ ⠿ kibana Pulled                                                           55.5s
+   ⠿ d8d02d457314 Pull complete                                             7.6s
+   ⠿ a2a6340cc578 Pull complete                                            15.9s
+   ⠿ bee982052bff Pull complete                                            17.2s
+   ⠿ ee697e306b93 Pull complete                                            17.8s
+   ⠿ 1b9dfb8cf65d Pull complete                                            49.5s
+   ⠿ bf2fd386ca4c Pull complete                                            49.6s
+   ⠿ 09854d164e14 Pull complete                                            49.7s
+   ⠿ 57db629d98b8 Pull complete                                            49.8s
+   ⠿ 3de4bbd85ab2 Pull complete                                            49.9s
+   ⠿ 9503e61c9325 Pull complete                                            51.4s
+ ⠿ elasticsearch Pulled                                                    38.3s
+   ⠿ a0fe4757966a Pull complete                                            16.6s
+   ⠿ af323c430ce5 Pull complete                                            17.7s
+   ⠿ 2a71ef3bd98b Pull complete                                            34.5s
+   ⠿ 1e56fdd350c5 Pull complete                                            34.7s
+   ⠿ 16d320661b98 Pull complete                                            35.4s
+[+] Running 0/0
+[+] Running 4/4er_default  Creating                                         0.0s
+ ⠿ Network docker_default            Created                                0.1s
+ ⠿ Container docker-elasticsearch-1  Started                                4.3s
+ ⠿ Container docker-kibana-1         Started                                3.5s
+ ⠿ Container docker-fluentd-1        Started                                4.6s
+
+$ docker-compose down
+[+] Running 10/10
+ ⠿ Container docker-blackbox-exporter-1  Removed                            1.6s
+ ⠿ Container docker-db-1                 Removed                            1.7s
+ ⠿ Container docker-prometheus-1         Removed                            2.3s
+ ⠿ Container docker-ui-1                 Removed                            1.2s
+ ⠿ Container docker-post-1               Removed                            2.4s
+ ⠿ Container docker-node-exporter-1      Removed                            1.7s
+ ⠿ Container docker-mongodb-exporter-1   Removed                            1.6s
+ ⠿ Container docker-comment-1            Removed                            2.4s
+ ⠿ Network docker_back_net               Removed                            0.1s
+ ⠿ Network docker_front_net              Removed                            0.1s
+
+$ docker-compose up -d
+[+] Running 10/10_front_net  Created                                        0.1s
+ ⠿ Network docker_front_net              Created                            0.1s
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Container docker-comment-1            Started                            4.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            6.0s
+ ⠿ Container docker-node-exporter-1      Started                            3.3s
+ ⠿ Container docker-mongodb-exporter-1   Started                            2.4s
+ ⠿ Container docker-ui-1                 Started                            3.9s
+ ⠿ Container docker-prometheus-1         Started                            5.1s
+ ⠿ Container docker-db-1                 Started                            3.0s
+ ⠿ Container docker-post-1               Started                            5.6s
+```
+
+- Open http://51.250.92.236:9292/ and create several posts in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover" -> "Index Patterns", and click "Create index pattern".
+- Enter "fluentd-* in the "Index pattern name" field and click "Next step".
+- Set "@timestamp" as a value of the "Time field" and click "Create index pattern".
+- Go to "Discover" and look at logs.
+
+Rebuild the fluentd image and restart fluentd:
+```
+$ cd ../logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+
+$ cd ../../docker
+
+$ docker-compose -f docker-compose-logging.yml up -d fluentd
+[+] Running 1/1
+ ⠿ Container docker-fluentd-1  Started                                      3.9s
+```
+
+- Open http://51.250.92.236:9292/ and create several posts in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", and look at the logs.
+- Now you can filter, for example, by event type: "event: post_create".
+
+Restart the `ui` microservice:
+```
+$ docker-compose up -d
+...
+```
+
+- Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", enter the "container_name: *ui*" query, and check that log messages from `ui` are unstructured.
+
+Rebuild the fluentd image and restart fluentd:
+```
+$ cd ../logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+
+$ cd ../../docker
+
+$ docker-compose -f docker-compose-logging.yml up -d fluentd
+[+] Running 1/1
+ ⠿ Container docker-fluentd-1  Started                                      5.3s
+```
+
+- Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", enter the "@log_name: service.ui" query, and check that log messages from `ui` are now structured.
+
+Rebuild the fluentd image and restart fluentd:
+```
+$ cd ../logging/fluentd
+
+$ docker build -t $USERNAME/fluentd .
+...
+
+$ cd ../../docker
+
+$ docker-compose -f docker-compose-logging.yml up -d fluentd
+[+] Running 1/1
+ ⠿ Container docker-fluentd-1  Started                                      4.5s
+```
+
+- Open http://51.250.92.236:9292/ and perform several actions in order to produce some logs.
+- Open http://51.250.92.236:5601/, go to "Discover", and check that grok pattens parse logs properly.
+
+Useful links:
+- [Grok Parser for Fluentd](https://www.rubydoc.info/gems/fluent-plugin-grok-parser)
+
+Restart the logging infrastructure and the application in order to enable tracing:
+```
+$ docker-compose -f docker-compose-logging.yml up -d
+[+] Running 13/13
+ ⠿ zipkin Pulled                                                           10.8s
+   ⠿ 24f0c933cbef Pull complete                                             0.9s
+   ⠿ 69e2f037cdb3 Pull complete                                             1.6s
+   ⠿ 1a3f070d750b Pull complete                                             2.0s
+   ⠿ 3e010093287c Pull complete                                             2.4s
+   ⠿ 7df9dcce0a60 Pull complete                                             2.6s
+   ⠿ 824016db13c8 Pull complete                                             2.9s
+   ⠿ fd2668db6e0d Pull complete                                             3.0s
+   ⠿ 6453a70a5672 Pull complete                                             5.2s
+   ⠿ 71ee7774b52d Pull complete                                             5.7s
+   ⠿ 89855adca250 Pull complete                                             5.9s
+   ⠿ fa57359ed425 Pull complete                                             7.8s
+   ⠿ 092e376cad15 Pull complete                                             7.9s
+[+] Running 4/4
+ ⠿ Container docker-zipkin-1         Started                                2.7s
+ ⠿ Container docker-kibana-1         Running                                0.0s
+ ⠿ Container docker-elasticsearch-1  Running                                0.0s
+ ⠿ Container docker-fluentd-1        Running                                0.0s
+
+$ docker-compose up -d
+[+] Running 8/8
+ ⠿ Container docker-db-1                 Running                            0.0s
+ ⠿ Container docker-mongodb-exporter-1   Running                            0.0s
+ ⠿ Container docker-blackbox-exporter-1  Running                            0.0s
+ ⠿ Container docker-prometheus-1         Running                            0.0s
+ ⠿ Container docker-node-exporter-1      Running                            0.0s
+ ⠿ Container docker-ui-1                 Started                            8.6s
+ ⠿ Container docker-comment-1            Started                            9.6s
+ ⠿ Container docker-post-1               Started                           10.6s
+```
+
+- Open http://51.250.92.236:9292/ and refresh the page several times.
+- Open http://51.250.92.236:9411/ and look at traces.
+
+Destroy the Docker machine:
+```
+$ docker-machine rm logging
+About to remove logging
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed logging
+
+$ yc compute instance delete logging
+done (26s)
+```
+
+</details>
