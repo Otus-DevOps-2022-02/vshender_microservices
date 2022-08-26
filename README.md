@@ -372,7 +372,7 @@ $ docker run --rm --pid host -ti tehbilly/htop
 
 Build the application image and run it:
 ```
-$ cd docker-monolith
+$ cd docker/docker-monolith
 
 $ docker build -t reddit:latest .
 Sending build context to Docker daemon  18.94kB
@@ -1378,5 +1378,302 @@ gitlab                     : ok=2    changed=2    unreachable=0    failed=0    s
 Go to "Settings" -> "Integrations" -> "Slack notifications" and configure Slack integration.
 
 You can check GitLab notifications [here](https://devops-team-otus.slack.com/archives/GSFU43CHG).
+
+</details>
+
+
+## Homework #22: monitoring-1
+
+- Got acquainted with Prometheus.
+- Built a Prometheus Docker image to monitor the application.
+- Added Prometheus service to the `docker/docker-compose.yml` file.
+- Added [node-exporter](https://github.com/prometheus/node_exporter) for host machine monitoring.
+- Pushed the created application images to DockerHub.
+- Implemented MongoDB monitoring using [mongodb-exporter](https://github.com/percona/mongodb_exporter).
+- Implemented Blackbox monitoring using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter).
+- Added `Makefile` to automate various actions.
+
+<details><summary>Details</summary>
+
+Create a Docker machine on a Yandex.Cloud VM:
+```
+$ yc compute instance create \
+    --name docker-host \
+    --zone ru-central1-a \
+    --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+    --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+    --ssh-key ~/.ssh/appuser.pub
+done (21s)
+id: fhmhfgr7hb4c9hepr9d3
+...
+network_interfaces:
+  - index: "0"
+    mac_address: d0:0d:11:7c:36:78
+    subnet_id: e9bqom95bd1o3fkemarr
+    primary_v4_address:
+      address: 10.128.0.4
+      one_to_one_nat:
+        address: 51.250.93.5
+        ip_version: IPV4
+...
+
+$ docker-machine create \
+    --driver generic \
+    --generic-ip-address=51.250.93.5 \
+    --generic-ssh-user yc-user \
+    --generic-ssh-key ~/.ssh/appuser \
+    docker-host
+Running pre-create checks...
+Creating machine...
+(docker-host) Importing SSH key...
+Waiting for machine to be running, this may take a few minutes...
+Detecting operating system of created instance...
+Waiting for SSH to be available...
+Detecting the provisioner...
+Provisioning with ubuntu(systemd)...
+Installing Docker...
+Copying certs to the local machine directory...
+Copying certs to the remote machine...
+Setting Docker configuration on the remote daemon...
+Checking connection to Docker...
+Docker is up and running!
+To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: docker-machine env docker-host
+
+$ docker-machine ls
+NAME          ACTIVE   DRIVER    STATE     URL                      SWARM   DOCKER      ERRORS
+docker-host   *        generic   Running   tcp://51.250.93.5:2376           v20.10.17
+
+$ docker-machine ip docker-host
+51.250.93.5
+
+$ eval $(docker-machine env docker-host)
+```
+
+Run Prometheus:
+```
+$ docker run --name prometheus --rm -d -p 9090:9090 prom/prometheus
+Unable to find image 'prom/prometheus:latest' locally
+latest: Pulling from prom/prometheus
+...
+Status: Downloaded newer image for prom/prometheus:latest
+8086c215b74860d75273a383d694d65525df1a3674c2d8ac88ee852e4c27b03b
+
+$ docker ps
+CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS          PORTS                                       NAMES
+8086c215b748   prom/prometheus   "/bin/prometheus --c…"   15 seconds ago   Up 12 seconds   0.0.0.0:9090->9090/tcp, :::9090->9090/tcp   prometheus
+```
+
+Open http://51.250.93.5:9090/ and get acquainted with Prometheus.
+
+Stop Prometheus:
+```
+$ docker stop prometheus
+prometheus
+```
+
+Build a Prometheus Docker image to monitor the application:
+```
+$ cd monitoring/prometheus
+$ export USERNAME=vshender
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Build the application microservice images:
+```
+$ cd ../../
+
+$ for srv in ui post-py comment; do cd src/$srv; USER_NAME=$USERNAME bash docker_build.sh; cd -; done
+...
+```
+
+Run the application:
+```
+$ cd docker
+
+$ cp .env.example .env
+
+$ docker-compose up -d
+[+] Running 7/7
+ ⠿ Network docker_front_net       Created                                   0.1s
+ ⠿ Network docker_back_net        Created                                   0.1s
+ ⠿ Container docker-db-1          Started                                   2.3s
+ ⠿ Container docker-post-1        Started                                   3.8s
+ ⠿ Container docker-ui-1          Started                                   3.4s
+ ⠿ Container docker-comment-1     Started                                   4.7s
+ ⠿ Container docker-prometheus-1  Started
+...
+```
+
+- Open http://51.250.93.5:9292/ and check the application.
+- Open http://51.250.93.5:9090/ adn check the Prometheus.
+
+Rebuild the Prometheus Docker image with the node-exporter configuration added:
+```
+$ cd ../monitoring/prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 7/7
+ ⠿ Container docker-post-1        Removed                                   2.9s
+ ⠿ Container docker-prometheus-1  Removed                                   3.0s
+ ⠿ Container docker-ui-1          Removed                                   2.3s
+ ⠿ Container docker-db-1          Removed                                   2.1s
+ ⠿ Container docker-comment-1     Removed                                   3.0s
+ ⠿ Network docker_front_net       Removed                                   0.1s
+ ⠿ Network docker_back_net        Removed                                   0.1s
+
+$ docker-compose up -d
+[+] Running 8/8
+ ⠿ Network docker_back_net           Created                                0.1s
+ ⠿ Network docker_front_net          Created                                0.1s
+ ⠿ Container docker-db-1             Started                                3.0s
+ ⠿ Container docker-post-1           Started                                4.9s
+ ⠿ Container docker-node-exporter-1  Started                                2.2s
+ ⠿ Container docker-comment-1        Started                                3.7s
+ ⠿ Container docker-ui-1             Started                                4.1s
+ ⠿ Container docker-prometheus-1     Started                                2.7s
+```
+
+- Open http://51.250.93.5:9090/targets and check the node-exporter target.
+- Check the `node_load1` metric: http://51.250.93.5:9090/graph?g0.range_input=1h&g0.expr=node_load1&g0.tab=0.
+- Add load:
+
+  ```
+  $ docker-machine ssh docker-host
+  ...
+  yc-user@docker-host:~$ yes > /dev/null
+  ^C
+
+  yc-user@docker-host:~$ exit
+  logout
+  ```
+- Check the `node_load1` metric again.
+
+Push the created application images to DockerHub:
+```
+$ docker login
+Authenticating with existing credentials...
+Login Succeeded
+
+...
+
+$ for image in ui comment post prometheus; do docker push $USERNAME/$image; done
+...
+```
+
+DockerHub profile: https://hub.docker.com/u/vshender.
+
+Build the mongodb-exporter image:
+```
+$ cd ../monitoring/mongodb
+
+$ docker build -t $USERNAME/mongodb-exporter .
+...
+```
+
+Rebuild the Prometheus Docker image with the mongodb-exporter configuration added:
+```
+$ cd ../prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 8/8
+ ⠿ Container docker-comment-1        Removed                                1.9s
+ ⠿ Container docker-prometheus-1     Removed                                2.5s
+ ⠿ Container docker-post-1           Removed                                2.4s
+ ⠿ Container docker-node-exporter-1  Removed                                1.9s
+ ⠿ Container docker-db-1             Removed                                1.7s
+ ⠿ Container docker-ui-1             Removed                                2.5s
+ ⠿ Network docker_front_net          Removed                                0.1s
+
+$ docker-compose up -d
+[+] Running 9/9
+ ⠿ Network docker_back_net              Created                             0.1s
+ ⠿ Network docker_front_net             Created                             0.1s
+ ⠿ Container docker-ui-1                Started                             3.0s
+ ⠿ Container docker-prometheus-1        Started                             3.2s
+ ⠿ Container docker-db-1                Started                             4.8s
+ ⠿ Container docker-node-exporter-1     Started                             3.4s
+ ⠿ Container docker-post-1              Started                             6.6s
+ ⠿ Container docker-comment-1           Started                             5.5s
+ ⠿ Container docker-mongodb-exporter-1  Started                             4.2s
+```
+
+Open http://51.250.93.5:9090/targets and check the mongodb-exporter target.
+
+Build the blackbox-exporter image:
+```
+$ cd ../monitoring/blackbox
+
+$ docker build -t $USERNAME/blackbox-exporter .
+...
+```
+
+Rebuild the Prometheus Docker image with the blackbox-exporter configuration added:
+```
+$ cd ../prometheus
+
+$ docker build -t $USERNAME/prometheus .
+...
+```
+
+Rerun the application:
+```
+$ cd ../../docker
+
+$ docker-compose down
+[+] Running 9/9
+ ⠿ Container docker-db-1                Removed                             1.5s
+ ⠿ Container docker-ui-1                Removed                             1.2s
+ ⠿ Container docker-post-1              Removed                             2.1s
+ ⠿ Container docker-comment-1           Removed                             2.1s
+ ⠿ Container docker-node-exporter-1     Removed                             1.1s
+ ⠿ Container docker-prometheus-1        Removed                             1.8s
+ ⠿ Container docker-mongodb-exporter-1  Removed                             1.0s
+ ⠿ Network docker_front_net             Removed                             0.1s
+ ⠿ Network docker_back_net              Removed                             0.1s
+
+$ docker-compose up -d
+[+] Running 10/10
+ ⠿ Network docker_back_net               Created                            0.1s
+ ⠿ Network docker_front_net              Created                            0.3s
+ ⠿ Container docker-db-1                 Started                            2.1s
+ ⠿ Container docker-blackbox-exporter-1  Started                            2.6s
+ ⠿ Container docker-ui-1                 Started                            4.8s
+ ⠿ Container docker-post-1               Started                            4.3s
+ ⠿ Container docker-comment-1            Started                            5.6s
+ ⠿ Container docker-prometheus-1         Started                            3.5s
+ ⠿ Container docker-node-exporter-1      Started                            3.0s
+ ⠿ Container docker-mongodb-exporter-1   Started                            6.6s
+```
+
+Open http://51.250.93.5:9090/targets and check the blackbox-exporter target.
+
+Destroy the Docker machine:
+```
+$ docker-machine rm docker-host
+About to remove docker-host
+WARNING: This action will delete both local reference and remote instance.
+Are you sure? (y/n): y
+Successfully removed docker-host
+
+$ yc compute instance delete docker-host
+done (14s)
+```
 
 </details>
