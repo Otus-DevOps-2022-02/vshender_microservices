@@ -1158,4 +1158,225 @@ $ yc compute instance delete docker-host
 done (15s)
 ```
 
-</summary>
+</details>
+
+
+## Homework #20: gitlab-ci-1
+
+- Implemented Gitlab deployment.
+- Added a pipeline definition.
+- Started and registered a Gitlab runner.
+- Added the application code to the repository.
+- Added a unit test for the application.
+- Defined the `review` stage and the `dev` environment.
+- Defined the `staging` and the `production` stages.
+- Restricted the `staging` and the `production` stages to run for tags only.
+- Added dynamic environments for branches.
+- Implemented the application container building.
+- Implemented the application container testing.
+- Implemented testing environment creation and the application deployment for review.
+- Implemented GitLab runners creation.
+- Configured GitLab integration with Slack.
+
+<details><summary>Details</summary>
+
+Deploy Gitlab:
+```
+$ cd gitlab-ci/gitlab/infra/terraform
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+gitlab_external_ip = "84.201.130.130"
+
+$ cd ../ansible
+
+$ ansible-playbook playbooks/site.yml
+...
+
+TASK [Show Gitlab password] **************************************************************************************
+ok: [gitlab] => {
+    "msg": "Gitlab credentials for the first login: username: root, password: ..."
+}
+
+PLAY RECAP *******************************************************************************************************
+gitlab                     : ok=8    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Configure Gitlab:
+1. Open http://84.201.130.130/
+2. Login using the provided credentials.
+3. Go to "Edit profile" -> "Password" and change the password, as the file containing the default password will be deleted after 24 hours.
+4. Go to "Menu" -> "Admin" -> "Settings" -> "General" -> "Sign-up restrictions" and disable sign-up.
+
+Useful links:
+- [GitLab Docker images](https://docs.gitlab.com/ee/install/docker.html)
+- [community.docker.docker_container module --- manage docker containers](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_container_module.html)
+
+Configure a repository for the application:
+1. Go to "+" -> "New group" and create a new private group named "homework".
+2. Create a new project named "example".
+3. Push the application repository:
+```
+$ git remote add gitlab http://84.201.130.130/homework/example.git
+
+$ git push gitlab gitlab-ci-1
+...
+```
+
+Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "pending".
+
+Go to "Settings" -> "CI/CD" -> "Runners" and get the runners registration token.
+
+Start and register a Gitlab runner:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+Unable to find image 'gitlab/gitlab-runner:latest' locally
+latest: Pulling from gitlab/gitlab-runner
+d7bfe07ed847: Already exists
+fa6bd21be6f6: Pull complete
+d4a2aca7780c: Pull complete
+Digest: sha256:3c00590a96d46655560b6c19b898c2b70a87213b9de48364ae4d426861db807f
+Status: Downloaded newer image for gitlab/gitlab-runner:latest
+59bbae83e03c946cc004a82288865a6475252d4f8d3dfb50934ad86e57f5e3eb
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker exec -it gitlab-runner gitlab-runner register \
+  --url http://84.201.130.130/ \
+  --registration-token ... \
+  --non-interactive \
+  --locked=false \
+  --name DockerRunner \
+  --executor docker \
+  --docker-image alpine:latest \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged
+Runtime platform                                    arch=amd64 os=linux pid=42 revision=32fc1585 version=15.2.1
+Running in system-mode.
+
+Registering runner... succeeded                     runner=GR1348941JkFNu6JQ
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+
+Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml"
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Go to "CI/CD" -> "Pipelines" and check that the pipeline status is "passed".
+
+Add the application code to the repository:
+```
+$ cd ../../../
+
+$ git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+...
+```
+
+Push the code to the Gitlab repository, then go to "Deployment" -> "Environments" and check environments.
+
+Go to "Settings" -> "CI/CD" -> "Variables" and add the `DOCKER_HUB_LOGIN` and the `DOCKER_HUB_PASSWD` variables needed for the application image building.
+
+Go to "Settigns" -> "CI/CD" -> "Runners" and remove the previously registered runner.
+
+Register a GitLab runner to use the `docker` image and `privileged` mode in order to be able to build Docker images:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker stop gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker rm gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+1cb8f35f7242658d717803861255ee59e949212cfdbe80e47c8cc04ec86434b0
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker exec -it gitlab-runner gitlab-runner register \
+  --url http://84.201.130.130/ \
+  --registration-token ... \
+  --docker-privileged \
+  --non-interactive \
+  --locked=false \
+  --name DockerRunner \
+  --executor docker \
+  --docker-image docker:19.03.1 \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged
+Runtime platform                                    arch=amd64 os=linux pid=29 revision=32fc1585 version=15.2.1
+Running in system-mode.
+
+Registering runner... succeeded                     runner=GR1348941JkFNu6JQ
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+
+Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml"
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Push the code to the Gitlab repository, then go to Docker Hub and check the built application image.
+
+Useful links:
+- [Use Docker to build Docker images](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker)
+- [Update: Changes to GitLab CI/CD and Docker in Docker with Docker 19.03](https://about.gitlab.com/blog/2019/07/31/docker-in-docker-with-docker-19-dot-03/)
+
+Create a bucket for the terraform state storage:
+```
+$ cd gitlab-ci/gitlab/infra/terraform
+$ terraform apply -auto-approve
+...
+```
+
+Go to "Settings" -> "CI/CD" -> "Variables" and add the `YC_OAUTH_TOKEN`, `YC_CLOUD_ID`, `YC_FOLDER_ID`, `YC_SUBNET_ID`, `YC_STATE_BUCKET_ACCESS_KEY`, and `YC_STATE_BUCKET_SECRET_KEY` variables needed for testing environments creation.
+
+Push a new branch to the Gitlab repository, then go to "Deployment" -> "Environments" and check the environment created for the branch.
+
+Useful links:
+- [Set dynamic environment URLs after a job finishes](https://docs.gitlab.com/ee/ci/environments/#set-dynamic-environment-urls-after-a-job-finishes)
+
+Go to "Settigns" -> "CI/CD" -> "Runners" and remove the previously registered runner.
+
+Stop the existing GitLab runner:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.130.130
+...
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker stop gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ sudo docker rm gitlab-runner
+gitlab-runner
+
+ubuntu@fhmojvm426geln1lnl5m:~$ exit
+logout
+```
+
+Create and register new GitLab runners using Ansible playbook:
+```
+$ cd gitlab-ci/gitlab/infra/ansible
+
+$ ansible-playbook playbooks/site.yml --extra-vars "runner_token=... runners_count=2" --tags create_runners
+...
+PLAY RECAP *******************************************************************************************************
+gitlab                     : ok=2    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Go to "Settings" -> "Integrations" -> "Slack notifications" and configure Slack integration.
+
+You can check GitLab notifications [here](https://devops-team-otus.slack.com/archives/GSFU43CHG).
+
+</details>

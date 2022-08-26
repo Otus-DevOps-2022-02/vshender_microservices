@@ -1,0 +1,61 @@
+---
+- name: Run Gitlab
+  hosts: gitlab
+  become: true
+  gather_facts: false
+
+  vars:
+    gitlab_dir: /srv/gitlab
+    gitlab_ip: "{{ ansible_host }}"
+
+  tasks:
+    - name: Create Gitlab directories
+      file:
+        path: "{{ gitlab_dir }}/{{ item }}"
+        state: directory
+      with_items:
+        - config
+        - data
+        - logs
+      tags: run_gitlab
+
+    - name: Run Gitlab
+      docker_container:
+        name: gitlab
+        hostname: gitlab.example.com
+        state: started
+        restart: false
+        restart_policy: always
+        env:
+          GITLAB_OMNIBUS_CONFIG: "external_url 'http://{{ gitlab_ip }}'"
+        ports:
+          - "80:80"
+          - "443:443"
+          - "2222:22"
+        volumes:
+          - "{{ gitlab_dir }}/config:/etc/gitlab"
+          - "{{ gitlab_dir }}/logs:/var/log/gitlab"
+          - "{{ gitlab_dir }}/data:/var/opt/gitlab"
+        image: gitlab/gitlab-ce:latest
+      tags: run_gitlab
+
+    - name: Obtain Gitlab password
+      community.docker.docker_container_exec:
+        container: gitlab
+        command: grep 'Password:' /etc/gitlab/initial_root_password
+      retries: 10
+      delay: 5
+      changed_when: false
+      register: gitlab_password_output
+      until: gitlab_password_output.rc == 0
+      tags: run_gitlab
+
+    - name: Extract Gitlab password
+      set_fact:
+        gitlab_password: "{{ gitlab_password_output.stdout_lines.0 | split | last }}"
+      tags: run_gitlab
+
+    - name: Show Gitlab password
+      debug:
+        msg: "Gitlab credentials for the first login: username: root, password: {{ gitlab_password }}"
+      tags: run_gitlab

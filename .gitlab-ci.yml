@@ -1,0 +1,124 @@
+image: docker:19.03.1
+
+stages:
+  - build
+  - test
+  - review
+  - stage
+  - production
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ''
+  DOCKER_IMAGE_NAME: $DOCKER_HUB_LOGIN/gitlab-reddit:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+  ENV_INFRA_PATH: gitlab-ci/testenv/infra
+  DATABASE_URL: 'mongodb://mongo/user_posts'
+
+before_script:
+  - cd reddit
+
+build_job:
+  stage: build
+  services:
+    - docker:19.03.1-dind
+  script:
+    - docker build --tag $DOCKER_IMAGE_NAME .
+    - docker login --username $DOCKER_HUB_LOGIN --password $DOCKER_HUB_PASSWD
+    - docker push $DOCKER_IMAGE_NAME
+
+# Old unit tests implementation.  Left here for OTUS CI checks.
+#
+# test_unit_job:
+#   stage: test
+#   image: ruby:2.4.2
+#   services:
+#     - mongo:latest
+#   script:
+#     - bundle install
+#     - ruby simpletest.rb
+
+test_unit_job:
+  stage: test
+  services:
+    - docker:19.03.1-dind
+    - mongo:latest
+  script:
+    - docker run $DOCKER_IMAGE_NAME ruby simpletest.rb
+
+test_integration_job:
+  stage: test
+  script:
+    - echo 'Testing 2'
+
+branch review:
+  stage: review
+  image: ubuntu:18.04
+  before_script:
+    - cd $ENV_INFRA_PATH/terraform
+    - ../scripts/init-terraform.sh
+  script:
+    - >
+      terraform apply -auto-approve \
+        -var="oauth_token=$YC_OAUTH_TOKEN" \
+        -var="cloud_id=$YC_CLOUD_ID" \
+        -var "folder_id=$YC_FOLDER_ID" \
+        -var "subnet_id=$YC_SUBNET_ID" \
+        -var "envname=$CI_ENVIRONMENT_SLUG"
+    - echo "ENV_IP=$(terraform output | grep env_external_ip | awk '{ print $3 }' | tr -d \")" > deploy.env
+  artifacts:
+    reports:
+      dotenv: $ENV_INFRA_PATH/terraform/deploy.env
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    url: "http://$ENV_IP:9292/"
+    on_stop: stop branch preview
+  only:
+    - branches
+  except:
+    - master
+
+stop branch preview:
+  stage: review
+  image: ubuntu:18.04
+  before_script:
+    - echo "Destroy $CI_ENVIRONMENT_SLUG"
+    - cd $ENV_INFRA_PATH/terraform
+    - ../scripts/init-terraform.sh
+  script:
+    - >
+      terraform destroy -auto-approve \
+        -var="oauth_token=$YC_OAUTH_TOKEN" \
+        -var="cloud_id=$YC_CLOUD_ID" \
+        -var "folder_id=$YC_FOLDER_ID" \
+        -var "subnet_id=$YC_SUBNET_ID" \
+        -var "envname=$CI_ENVIRONMENT_SLUG"
+  when: manual
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    action: stop
+  only:
+    - branches
+  except:
+    - master
+
+staging:
+  stage: stage
+  when: manual
+  only:
+    - /^\d+\.\d+\.\d+/
+  script:
+    - echo 'Deploy'
+  environment:
+    name: stage
+    url: https://beta.example.com
+
+production:
+  stage: production
+  when: manual
+  only:
+    - /^\d+\.\d+\.\d+/
+  script:
+    - echo 'Deploy'
+  environment:
+    name: production
+    url: https://example.com
