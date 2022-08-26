@@ -1963,3 +1963,12 @@ done (26s)
 ```
 
 </details>
+
+
+## Homework #28: kubernetes-1
+
+- Added Kubernetes manifests for the application.
+
+<details><summary>Details</summary>
+
+</details>
