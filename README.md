@@ -2356,3 +2356,85 @@ $ terraform destroy -auto-approve
 ```
 
 </details>
+
+
+## Homework #30: kubernetes-2
+
+- Started a local Kubernetes cluster using minikube.
+
+<details><summary>Details</summary>
+
+Start a local Kubernetes cluster using minikube:
+```
+$ minikube start --cpus=6 --memory=6g --vm-driver=virtualbox
+😄  minikube v1.26.1 on Darwin 12.5.1
+🆕  Kubernetes 1.24.3 is now available. If you would like to upgrade, specify: --kubernetes-version=v1.24.3
+✨  Using the virtualbox driver based on existing profile
+💿  Downloading VM boot image ...
+    > minikube-v1.26.1-amd64.iso....:  65 B / 65 B [---------] 100.00% ? p/s 0s
+    > minikube-v1.26.1-amd64.iso:  270.83 MiB / 270.83 MiB  100.00% 1.33 MiB p/
+👍  Starting control plane node minikube in cluster minikube
+💾  Downloading Kubernetes v1.23.3 preload ...
+    > preloaded-images-k8s-v18-v1...:  400.43 MiB / 400.43 MiB  100.00% 1.05 Mi
+🔄  Restarting existing virtualbox VM for "minikube" ...
+🐳  Preparing Kubernetes v1.23.3 on Docker 20.10.12 ...
+    ▪ kubelet.housekeeping-interval=5m
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+    ▪ Using image k8s.gcr.io/ingress-nginx/controller:v1.1.1
+    ▪ Using image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+    ▪ Using image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+🔎  Verifying Kubernetes components...
+🔎  Verifying ingress addon...
+🌟  Enabled addons: storage-provisioner, default-storageclass, ingress
+
+❗  /usr/local/bin/kubectl is version 1.25.0, which may have incompatibilites with Kubernetes 1.23.3.
+    ▪ Want kubectl v1.23.3? Try 'minikube kubectl -- get pods -A'
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+$ kubectl get nodes
+NAME       STATUS   ROLES                  AGE    VERSION
+minikube   Ready    control-plane,master   107d   v1.23.3
+
+$ cat ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /Users/vshender/.minikube/ca.crt
+    extensions:
+    - extension:
+        last-update: Sat, 27 Aug 2022 23:07:51 +03
+        provider: minikube.sigs.k8s.io
+        version: v1.26.1
+      name: cluster_info
+    server: https://192.168.59.101:8443
+  name: minikube
+contexts:
+- context:
+    cluster: minikube
+    extensions:
+    - extension:
+        last-update: Sat, 27 Aug 2022 23:07:51 +03
+        provider: minikube.sigs.k8s.io
+        version: v1.26.1
+      name: context_info
+    namespace: default
+    user: minikube
+  name: minikube
+current-context: minikube
+kind: Config
+preferences: {}
+users:
+- name: minikube
+  user:
+    client-certificate: /Users/vshender/.minikube/profiles/minikube/client.crt
+    client-key: /Users/vshender/.minikube/profiles/minikube/client.key
+
+$ kubectl config current-context
+minikube
+
+$ kubectl config get-contexts
+CURRENT   NAME       CLUSTER    AUTHINFO   NAMESPACE
+*         minikube   minikube   minikube   default
+```
+
+</details>
