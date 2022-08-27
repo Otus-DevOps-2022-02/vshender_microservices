@@ -1,0 +1,64 @@
+---
+- name: Initialize Kubernetes cluster
+  hosts: k8s-master
+  gather_facts: false
+
+  vars:
+    k8s_master_host: "{{ ansible_host }}"
+    pod_network_cidr: 10.244.0.0/16
+    k8s_admin_conf: /etc/kubernetes/admin.conf
+    calico_manifest: /home/ubuntu/calico.yml
+
+  tasks:
+    - name: Check if Kubernetes cluster is initialized
+      stat:
+        path: "{{ k8s_admin_conf }}"
+      become: true
+      register: k8s_admin_conf_st
+
+    - name: Initialize Kubernetes cluster
+      shell: |
+        kubeadm init --apiserver-cert-extra-sans={{ k8s_master_host }} \
+          --apiserver-advertise-address=0.0.0.0 \
+          --control-plane-endpoint={{ k8s_master_host }} \
+          --pod-network-cidr={{ pod_network_cidr }}
+      become: true
+      when: not k8s_admin_conf_st.stat.exists
+
+    - name: Create .kube directory
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: 0755
+
+    - name: Create admin.conf
+      copy:
+        src: "{{ k8s_admin_conf }}"
+        dest: /home/ubuntu/.kube/config
+        remote_src: true
+        owner: ubuntu
+        group: ubuntu
+        mode: 0600
+      become: true
+
+    - name: Obtain Calico pod network addon manifest
+      get_url:
+        url: https://projectcalico.docs.tigera.io/manifests/calico.yaml
+        dest: "{{ calico_manifest }}"
+        owner: ubuntu
+        group: ubuntu
+        mode: 0644
+
+    - name: Configure Calico pod network addon
+      lineinfile:
+        path: "{{ calico_manifest }}"
+        insertbefore: "# - name: CALICO_IPV4POOL_CIDR"
+        line: "            - name: CALICO_IPV4POOL_CIDR\n              value: \"{{ pod_network_cidr }}\""
+        firstmatch: true
+        backup: true
+
+    - name: Install Calico pod network addon
+      kubernetes.core.k8s:
+        src: "{{ calico_manifest }}"

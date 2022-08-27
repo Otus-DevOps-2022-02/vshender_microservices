@@ -1963,3 +1963,396 @@ done (26s)
 ```
 
 </details>
+
+
+## Homework #28: kubernetes-1
+
+- Added Kubernetes manifests for the application.
+- Deployed Kubernetes.
+- Deployed Kubernetes using Terraform and Ansible.
+
+<details><summary>Details</summary>
+
+Create VMs for Kubernetes:
+```
+$ yc compute instance create \
+  --name k8s-master \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2204-lts,size=40 \
+  --cores 4 \
+  --memory 4 \
+  --ssh-key ~/.ssh/appuser.pub
+...
+      one_to_one_nat:
+        address: 51.250.67.222
+        ip_version: IPV4
+...
+
+$ yc compute instance create \
+  --name k8s-worker \
+  --zone ru-central1-a \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=40 \
+  --cores 4 \
+  --memory 4 \
+  --ssh-key ~/.ssh/appuser.pub
+...
+      one_to_one_nat:
+        address: 51.250.87.182
+        ip_version: IPV4
+...
+```
+
+Install Docker on the created nodes:
+```
+$ ssh -i ~/.ssh/appuser yc-user@51.250.67.222
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo apt update && sudo apt install -y apt-transport-https ca-certificates curl
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo apt-get update && sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ exit
+logout
+
+$ ssh -i ~/.ssh/appuser yc-user@51.250.87.182
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo apt update && sudo apt install -y apt-transport-https ca-certificates curl
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+yc-user@fhmj0766iu802i9bp78m:~$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo apt-get update && sudo apt install docker-ce docker-ce-cli containerd.io -y
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ exit
+logout
+```
+
+Install Kubernetes on the created nodes:
+```
+$ ssh -i ~/.ssh/appuser yc-user@51.250.67.222
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k8s-archive-keyring.gpg
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/k8s-archive-keyring.gpg] http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/k8s.list > /dev/null
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo apt update && sudo apt install -y kubelet kubeadm kubectl
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo apt-mark hold kubelet kubeadm kubectl
+kubelet set on hold.
+kubeadm set on hold.
+kubectl set on hold.
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ containerd config default | sudo tee /etc/containerd/config.toml > /dev/null 2>&1
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo systemctl restart containerd
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo systemctl enable containerd
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ exit
+logout
+
+$ ssh -i ~/.ssh/appuser yc-user@51.250.87.182
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k8s-archive-keyring.gpg
+
+yc-user@fhmj0766iu802i9bp78m:~$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/k8s-archive-keyring.gpg] http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/k8s.list > /dev/null
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo apt update && sudo apt install -y kubelet kubeadm kubectl
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ containerd config default | sudo tee /etc/containerd/config.toml > /dev/null 2>&1
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo systemctl restart containerd
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo systemctl enable containerd
+
+yc-user@fhmlribunv8eqphcamlk:~$ exit
+logout
+```
+
+Initialize Kubernetes cluster on the master node:
+```
+$ ssh -i ~/.ssh/appuser yc-user@51.250.67.222
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo kubeadm init --apiserver-cert-extra-sans=51.250.67.222 \
+  --apiserver-advertise-address=0.0.0.0 \
+  --control-plane-endpoint=51.250.67.222 \
+  --pod-network-cidr=10.244.0.0/16
+...
+
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of control-plane nodes by copying certificate authorities
+and service account keys on each node and then running the following as root:
+
+  kubeadm join 51.250.67.222:6443 --token z8ytqi.ezf3m1goe8i8ao89 \
+        --discovery-token-ca-cert-hash sha256:16adbfc10cb9cbbed5a4fd89e40fde045a89179b25d9d365fe246d5536995cf8 \
+        --control-plane
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+  kubeadm join 51.250.67.222:6443 --token z8ytqi.ezf3m1goe8i8ao89 \
+        --discovery-token-ca-cert-hash sha256:16adbfc10cb9cbbed5a4fd89e40fde045a89179b25d9d365fe246d5536995cf8
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ mkdir -p $HOME/.kube
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl cluster-info
+Kubernetes control plane is running at https://51.250.67.222:6443
+CoreDNS is running at https://51.250.67.222:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl get nodes
+NAME                   STATUS     ROLES           AGE   VERSION
+fhmja07lrbaa1ida6rnp   NotReady   control-plane   18m   v1.25.0
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ exit
+logout
+```
+
+Join a worker node:
+```
+$ ssh -i ~/.ssh/appuser yc-user@51.250.87.182
+...
+
+yc-user@fhmj0766iu802i9bp78m:~$ sudo kubeadm join 51.250.67.222:6443 --token z8ytqi.ezf3m1goe8i8ao89 \
+  --discovery-token-ca-cert-hash sha256:16adbfc10cb9cbbed5a4fd89e40fde045a89179b25d9d365fe246d5536995cf8
+[preflight] Running pre-flight checks
+[preflight] Reading configuration from the cluster...
+[preflight] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Starting the kubelet
+[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap...
+
+This node has joined the cluster:
+* Certificate signing request was sent to apiserver and a response was received.
+* The Kubelet was informed of the new secure connection details.
+
+Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
+
+yc-user@fhmj0766iu802i9bp78m:~$ exit
+logout
+```
+
+Install Calico Pod Network Add-on on the master node:
+```
+$ ssh -i ~/.ssh/appuser yc-user@51.250.67.222
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ curl https://projectcalico.docs.tigera.io/manifests/calico.yaml -O
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  229k  100  229k    0     0   563k      0 --:--:-- --:--:-- --:--:--  563k
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl apply -f calico.yaml
+poddisruptionbudget.policy/calico-kube-controllers created
+serviceaccount/calico-kube-controllers created
+serviceaccount/calico-node created
+configmap/calico-config created
+customresourcedefinition.apiextensions.k8s.io/bgpconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/bgppeers.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/blockaffinities.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/caliconodestatuses.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/clusterinformations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/felixconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/globalnetworkpolicies.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/globalnetworksets.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/hostendpoints.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamblocks.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamconfigs.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamhandles.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ippools.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipreservations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/kubecontrollersconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/networkpolicies.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/networksets.crd.projectcalico.org created
+clusterrole.rbac.authorization.k8s.io/calico-kube-controllers created
+clusterrole.rbac.authorization.k8s.io/calico-node created
+clusterrolebinding.rbac.authorization.k8s.io/calico-kube-controllers created
+clusterrolebinding.rbac.authorization.k8s.io/calico-node created
+daemonset.apps/calico-node created
+```
+
+Verify the status of pods in `kube-system` namespace and check the nodes status:
+```
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl get pods -n kube-system
+NAME                                           READY   STATUS              RESTARTS   AGE
+calico-kube-controllers-7bdf4bf59d-q9vf2       0/1     ContainerCreating   0          25s
+calico-node-p4tsl                              0/1     Init:2/3            0          25s
+calico-node-z4dkh                              0/1     Init:2/3            0          25s
+coredns-565d847f94-5bkzv                       0/1     ContainerCreating   0          53m
+coredns-565d847f94-kbhwp                       0/1     ContainerCreating   0          53m
+etcd-fhmja07lrbaa1ida6rnp                      1/1     Running             0          54m
+kube-apiserver-fhmja07lrbaa1ida6rnp            1/1     Running             0          54m
+kube-controller-manager-fhmja07lrbaa1ida6rnp   1/1     Running             0          54m
+kube-proxy-4d6v9                               1/1     Running             0          19m
+kube-proxy-sbcms                               1/1     Running             0          53m
+kube-scheduler-fhmja07lrbaa1ida6rnp            1/1     Running             0          54m
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl get nodes
+NAME                   STATUS   ROLES           AGE   VERSION
+fhmj0766iu802i9bp78m   Ready    <none>          19m   v1.25.0
+fhmja07lrbaa1ida6rnp   Ready    control-plane   55m   v1.25.0
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ exit
+logout
+```
+
+Apply the application manifests:
+```
+$ scp -i ~/.ssh/appuser -r kubernetes/reddit yc-user@51.250.67.222:/home/yc-user
+...
+
+$ ssh -i ~/.ssh/appuser yc-user@51.250.67.222
+...
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl apply -f reddit/mongo-deployment.yml
+deployment.apps/mongo-deployment created
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl apply -f reddit/post-deployment.yml
+
+deployment.apps/post-deployment created
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl apply -f reddit/comment-deployment.yml
+deployment.apps/comment-deployment created
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl apply -f reddit/ui-deployment.yml
+deployment.apps/ui-deployment created
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+comment-deployment-7b567f8548-lxqwn   1/1     Running   0          48s
+mongo-deployment-7547584d88-k5pdm     1/1     Running   0          69s
+post-deployment-745d9777d4-chdng      1/1     Running   0          59s
+ui-deployment-666c9c944d-97qpt        1/1     Running   0          40s
+
+yc-user@fhmja07lrbaa1ida6rnp:~$ exit
+logout
+```
+
+Destroy the VMs:
+```
+$ yc compute instance list
++----------------------+------------+---------------+---------+---------------+-------------+
+|          ID          |    NAME    |    ZONE ID    | STATUS  |  EXTERNAL IP  | INTERNAL IP |
++----------------------+------------+---------------+---------+---------------+-------------+
+| fhmj0766iu802i9bp78m | k8s-worker | ru-central1-a | RUNNING | 51.250.87.182 | 10.128.0.20 |
+| fhmja07lrbaa1ida6rnp | k8s-master | ru-central1-a | RUNNING | 51.250.67.222 | 10.128.0.10 |
++----------------------+------------+---------------+---------+---------------+-------------+
+
+$ yc compute instance delete fhmj0766iu802i9bp78m
+done (18s)
+
+$ yc compute instance delete fhmja07lrbaa1ida6rnp
+done (14s)
+```
+
+Useful links:
+- [How to Install Docker on Ubuntu 22.04 / 20.04 LTS](https://www.linuxtechi.com/install-use-docker-on-ubuntu/)
+- [How to Install Kubernetes Cluster on Ubuntu 22.04](https://www.linuxtechi.com/install-kubernetes-on-ubuntu-22-04/)
+- [Install Calico networking and network policy for on-premises deployments](https://projectcalico.docs.tigera.io/getting-started/kubernetes/self-managed-onprem/onpremises)
+- [Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead](https://stackoverflow.com/questions/68992799/warning-apt-key-is-deprecated-manage-keyring-files-in-trusted-gpg-d-instead)
+
+Create a Kubernetes cluster using Terraform and Ansible:
+```
+$ cd kubernetes/terraform
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+k8s_master_external_ip = "84.201.129.45"
+k8s_worker_external_ip = "84.201.133.30"
+
+$ cd ../ansible
+
+$ ansible-galaxy install -r requirements.yml
+...
+
+$ ansible-playbook playbooks/site.yml
+...
+
+PLAY RECAP *******************************************************************************************************
+k8s-master                 : ok=25   changed=21   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-worker                 : ok=19   changed=14   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Check the created cluster:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.129.45
+...
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl cluster-info
+Kubernetes control plane is running at https://84.201.129.45:6443
+CoreDNS is running at https://84.201.129.45:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl get nodes
+NAME                   STATUS   ROLES           AGE   VERSION
+fhmiq2dui6ok8d6nkm4o   Ready    control-plane   77m   v1.25.0
+fhmklbk7p5jpd55nmj5i   Ready    <none>          22m   v1.25.0
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+comment-deployment-7b567f8548-l54cm   1/1     Running   0          41s
+mongo-deployment-7547584d88-cp4lx     1/1     Running   0          3m34s
+post-deployment-745d9777d4-tj8zd      1/1     Running   0          49s
+ui-deployment-666c9c944d-g2j7w        1/1     Running   0          33s
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ exit
+logout
+```
+
+Destory the created cluster:
+```
+$ cd ../terraform
+
+$ terraform destroy -auto-approve
+...
+```
+
+</details>

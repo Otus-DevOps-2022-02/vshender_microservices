@@ -1,0 +1,6 @@
+---
+- import_playbook: install_docker.yml
+- import_playbook: install_k8s.yml
+- import_playbook: init_k8s_cluster.yml
+- import_playbook: join_worker.yml
+- import_playbook: deploy_app.yml
