@@ -1969,6 +1969,7 @@ done (26s)
 
 - Added Kubernetes manifests for the application.
 - Deployed Kubernetes.
+- Deployed Kubernetes using Terraform and Ansible.
 
 <details><summary>Details</summary>
 
@@ -2288,5 +2289,70 @@ Useful links:
 - [How to Install Kubernetes Cluster on Ubuntu 22.04](https://www.linuxtechi.com/install-kubernetes-on-ubuntu-22-04/)
 - [Install Calico networking and network policy for on-premises deployments](https://projectcalico.docs.tigera.io/getting-started/kubernetes/self-managed-onprem/onpremises)
 - [Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead](https://stackoverflow.com/questions/68992799/warning-apt-key-is-deprecated-manage-keyring-files-in-trusted-gpg-d-instead)
+
+Create a Kubernetes cluster using Terraform and Ansible:
+```
+$ cd kubernetes/terraform
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+k8s_master_external_ip = "84.201.129.45"
+k8s_worker_external_ip = "84.201.133.30"
+
+$ cd ../ansible
+
+$ ansible-galaxy install -r requirements.yml
+...
+
+$ ansible-playbook playbooks/site.yml
+...
+
+PLAY RECAP *******************************************************************************************************
+k8s-master                 : ok=25   changed=21   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-worker                 : ok=19   changed=14   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Check the created cluster:
+```
+$ ssh -i ~/.ssh/appuser ubuntu@84.201.129.45
+...
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl cluster-info
+Kubernetes control plane is running at https://84.201.129.45:6443
+CoreDNS is running at https://84.201.129.45:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl get nodes
+NAME                   STATUS   ROLES           AGE   VERSION
+fhmiq2dui6ok8d6nkm4o   Ready    control-plane   77m   v1.25.0
+fhmklbk7p5jpd55nmj5i   Ready    <none>          22m   v1.25.0
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+comment-deployment-7b567f8548-l54cm   1/1     Running   0          41s
+mongo-deployment-7547584d88-cp4lx     1/1     Running   0          3m34s
+post-deployment-745d9777d4-tj8zd      1/1     Running   0          49s
+ui-deployment-666c9c944d-g2j7w        1/1     Running   0          33s
+
+ubuntu@fhmiq2dui6ok8d6nkm4o:~$ exit
+logout
+```
+
+Destory the created cluster:
+```
+$ cd ../terraform
+
+$ terraform destroy -auto-approve
+...
+```
 
 </details>

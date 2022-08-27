@@ -1,0 +1,50 @@
+---
+- name: Install Kubernetes
+  hosts: k8s
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install requirements
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+        update_cache: true
+
+    - name: Add a Kubernetes APT key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        keyring: /usr/share/keyrings/k8s-archive-keyring.gpg
+
+    - name: Add a Kubernetes repository
+      apt_repository:
+        repo: >
+          deb [arch=amd64 signed-by=/usr/share/keyrings/k8s-archive-keyring.gpg]
+          http://apt.kubernetes.io/ kubernetes-xenial main
+        filename: k8s.list
+        update_cache: true
+
+    - name: Install Kubernetes
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+    - name: Hold Kubernetes packages
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: Install Python package installer
+      apt:
+        name: python3-pip
+
+    - name: Install a Python library for the Kubernetes
+      pip:
+        name: kubernetes

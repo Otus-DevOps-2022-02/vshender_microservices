@@ -1,0 +1,20 @@
+---
+- name: Deploy the application
+  hosts: k8s-master
+  gather_facts: false
+
+  tasks:
+    - name: Copy the application manifests
+      copy:
+        src: "{{ playbook_dir }}/../../reddit"
+        dest: /home/ubuntu
+
+    - name: Deploy the application
+      kubernetes.core.k8s:
+        src: /home/ubuntu/reddit/{{ item }}
+        namespace: default
+      loop:
+        - mongo-deployment.yml
+        - post-deployment.yml
+        - comment-deployment.yml
+        - ui-deployment.yml

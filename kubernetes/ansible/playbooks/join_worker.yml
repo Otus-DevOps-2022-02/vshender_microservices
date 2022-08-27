@@ -1,0 +1,23 @@
+---
+- name: Join a worker node
+  hosts: k8s-worker
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check if the worker already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_st
+
+    - name: Obtain a join comand
+      command: kubeadm token create --print-join-command
+      delegate_to: k8s-master
+      become: false
+      register: k8s_join_command
+      changed_when: false
+      when: not kubelet_st.stat.exists
+
+    - name: Join the worker node
+      command: "{{ k8s_join_command.stdout }}"
+      when: not kubelet_st.stat.exists
