@@ -2364,6 +2364,7 @@ $ terraform destroy -auto-approve
 - Started the application in the minikube cluster.
 - Started minikube dashboard.
 - Created the `dev` namespace.
+- Started the application in a Yandex.Cloud managed Kubernetes cluster.
 
 <details><summary>Details</summary>
 
@@ -2688,6 +2689,82 @@ service "post-db" deleted
 service "post" deleted
 deployment.apps "ui" deleted
 service "ui" deleted
+```
+
+Obtain credentials for the created Yandex.Cloud managed Kubernetes cluster:
+```
+$ yc managed-kubernetes cluster get-credentials test-cluster --external
+
+Context 'yc-test-cluster' was added as default to kubeconfig '/Users/vshender/.kube/config'.
+Check connection to cluster using 'kubectl cluster-info --kubeconfig /Users/vshender/.kube/config'.
+
+Note, that authentication depends on 'yc' and its config profile 'default'.
+To access clusters using the Kubernetes API, please use Kubernetes Service Account.
+
+$ kubectl config current-context
+yc-test-cluster
+
+$ kubectl config get-contexts
+CURRENT   NAME              CLUSTER                               AUTHINFO                              NAMESPACE
+          minikube          minikube                              minikube                              default
+*         yc-test-cluster   yc-managed-k8s-catds6ugdigmi36t9331   yc-managed-k8s-catds6ugdigmi36t9331
+```
+
+Start the application in the Yandex.Cloud managed Kubernetes cluster:
+```
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+deployment.apps/comment created
+service/comment-db created
+service/comment created
+namespace/dev unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui created
+service/ui created
+
+$ kubectl get nodes -o wide
+NAME                        STATUS   ROLES    AGE     VERSION   INTERNAL-IP   EXTERNAL-IP     OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+cl19n73v3eg48lc5v71n-omim   Ready    <none>   7m30s   v1.22.6   10.128.0.21   51.250.8.149    Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+cl19n73v3eg48lc5v71n-ukor   Ready    <none>   7m41s   v1.22.6   10.128.0.16   62.84.118.232   Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+
+$ kubectl describe service ui -n dev | grep NodePort
+Type:                     NodePort
+NodePort:                 <unset>  30089/TCP
+```
+
+Open http://51.250.8.149:30089/ and check the application.
+
+Delete the application:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+```
+
+Switch back to the `minikube` context:
+```
+$ kubectl config use-context minikube
+Switched to context "minikube".
+
+$ kubectl config current-context
+minikube
 ```
 
 </details>
