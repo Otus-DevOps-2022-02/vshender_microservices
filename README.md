@@ -2363,6 +2363,7 @@ $ terraform destroy -auto-approve
 - Started a local Kubernetes cluster using minikube.
 - Started the application in the minikube cluster.
 - Started minikube dashboard.
+- Created the `dev` namespace.
 
 <details><summary>Details</summary>
 
@@ -2622,6 +2623,71 @@ deployment.apps/kubernetes-dashboard   1/1     1            1           10m
 
 NAME                                             DESIRED   CURRENT   READY   AGE
 replicaset.apps/kubernetes-dashboard-cd7c84bfc   1         1         1       10m
+```
+
+Create the `dev` namespace and start the application in that namespace:
+```
+$ kubectl delete -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+
+$ kubectl get pods
+No resources found in default namespace.
+
+$ kubectl get pods -n dev
+NAME                       READY   STATUS              RESTARTS   AGE
+comment-5bdb65d65b-5t682   1/1     Running             0          14s
+comment-5bdb65d65b-f2gvd   1/1     Running             0          14s
+comment-5bdb65d65b-qvxdc   1/1     Running             0          14s
+mongo-67685ddb89-cn57z     1/1     Running             0          14s
+post-b7857bb4d-22zzw       1/1     Running             0          13s
+post-b7857bb4d-gm79j       1/1     Running             0          13s
+post-b7857bb4d-zz8z2       0/1     ContainerCreating   0          13s
+ui-8878d5c7d-7nz5v         0/1     ContainerCreating   0          13s
+ui-8878d5c7d-fjtmp         0/1     ContainerCreating   0          13s
+ui-8878d5c7d-svs6t         0/1     ContainerCreating   0          13s
+```
+
+Execute `minikube service ui` and check the application:
+```
+$ minikube service ui -n dev
+|-----------|------|-------------|-----------------------------|
+| NAMESPACE | NAME | TARGET PORT |             URL             |
+|-----------|------|-------------|-----------------------------|
+| dev       | ui   |        9292 | http://192.168.59.101:30582 |
+|-----------|------|-------------|-----------------------------|
+🎉  Opening service dev/ui in default browser...
+```
+
+Delete the application:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
 ```
 
 </details>

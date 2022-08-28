@@ -22,3 +22,8 @@ spec:
       containers:
         - image: vshender/ui:latest
           name: ui
+          env:
+            - name: ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
