@@ -2361,6 +2361,7 @@ $ terraform destroy -auto-approve
 ## Homework #30: kubernetes-2
 
 - Started a local Kubernetes cluster using minikube.
+- Started the application in the minikube cluster.
 
 <details><summary>Details</summary>
 
@@ -2435,6 +2436,123 @@ minikube
 $ kubectl config get-contexts
 CURRENT   NAME       CLUSTER    AUTHINFO   NAMESPACE
 *         minikube   minikube   minikube   default
+```
+
+Start the [ui deployment](./kubernetes/reddit/ui-deployment.yml):
+```
+$ cd kubernetes/reddit
+
+$ kubectl apply -f ui-deployment.yml
+deployment.apps/ui created
+
+$ kubectl get deployments
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+ui     3/3     3            3           2m50s
+
+$ kubectl get pods --selector component=ui
+NAME                  READY   STATUS    RESTARTS   AGE
+ui-5df8d9f844-d7m74   1/1     Running   0          10m
+ui-5df8d9f844-f6227   1/1     Running   0          10m
+ui-5df8d9f844-gxdft   1/1     Running   0          10m
+
+$ kubectl port-forward ui-5df8d9f844-d7m74 8080:9292
+Forwarding from 127.0.0.1:8080 -> 9292
+Forwarding from [::1]:8080 -> 9292
+Handling connection for 8080
+...
+```
+
+Open http://localhost:8080/ and check the `ui` component.
+
+Start the [comment service](./kubernetes/reddit/comment-service.yml):
+```
+$ kubectl apply -f comment-deployment.yml
+deployment.apps/comment created
+
+$ kubectl apply -f comment-service.yml
+service/comment created
+
+$ kubectl get services
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+comment      ClusterIP   10.98.27.148   <none>        9292/TCP   6s
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    107d
+
+$ kubectl describe service comment | grep Endpoints
+Endpoints:         172.17.0.7:9292,172.17.0.8:9292,172.17.0.9:9292
+
+$ kubectl exec -it ui-5df8d9f844-d7m74 -- nslookup comment
+Server:         10.96.0.10
+Address:        10.96.0.10:53
+
+** server can't find comment.cluster.local: NXDOMAIN
+
+Name:   comment.default.svc.cluster.local
+Address: 10.101.78.94
+...
+```
+
+Start the whole application:
+```
+$ kubectl apply \
+    -f comment-deployment.yml \
+    -f comment-mongodb-service.yml \
+    -f comment-service.yml \
+    -f mongo-deployment.yml \
+    -f mongo-service.yml \
+    -f post-deployment.yml \
+    -f post-mongodb-service.yml \
+    -f post-service.yml \
+    -f ui-deployment.yml
+deployment.apps/comment unchanged
+service/comment-db created
+service/comment unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui unchanged
+
+$ kubectl port-forward ui-5df8d9f844-d7m74 8080:9292
+Forwarding from 127.0.0.1:8080 -> 9292
+Forwarding from [::1]:8080 -> 9292
+Handling connection for 8080
+```
+
+Open http://localhost:8080/ and check the application.
+
+Start the [ui service](./kubernetes/reddit/ui-service.yml) that uses `NodePort`:
+```
+$ kubectl apply -f ui-service.yml
+service/ui created
+
+; minikube service list
+|---------------|------------------------------------|--------------|-----------------------------|
+|   NAMESPACE   |                NAME                | TARGET PORT  |             URL             |
+|---------------|------------------------------------|--------------|-----------------------------|
+| default       | comment                            | No node port |
+| default       | comment-db                         | No node port |
+| default       | kubernetes                         | No node port |
+| default       | mongodb                            | No node port |
+| default       | post                               | No node port |
+| default       | post-db                            | No node port |
+| default       | ui                                 |         9292 | http://192.168.59.101:31833 |
+| ingress-nginx | ingress-nginx-controller           | http/80      | http://192.168.59.101:32622 |
+|               |                                    | https/443    | http://192.168.59.101:32430 |
+| ingress-nginx | ingress-nginx-controller-admission | No node port |
+| kube-system   | kube-dns                           | No node port |
+|---------------|------------------------------------|--------------|-----------------------------|
+```
+
+Open http://192.168.59.101:31833 (or execute `minikube service ui`) and check the application:
+```
+$ minikube service ui
+|-----------|------|-------------|-----------------------------|
+| NAMESPACE | NAME | TARGET PORT |             URL             |
+|-----------|------|-------------|-----------------------------|
+| default   | ui   |        9292 | http://192.168.59.101:31833 |
+|-----------|------|-------------|-----------------------------|
+🎉  Opening service default/ui in default browser...
 ```
 
 </details>
