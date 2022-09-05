@@ -2365,6 +2365,7 @@ $ terraform destroy -auto-approve
 - Started minikube dashboard.
 - Created the `dev` namespace.
 - Started the application in a Yandex.Cloud managed Kubernetes cluster.
+- Created a Yandex.Cloud managed Kubernetes cluster using Terraform.
 
 <details><summary>Details</summary>
 
@@ -2765,6 +2766,118 @@ Switched to context "minikube".
 
 $ kubectl config current-context
 minikube
+```
+
+Create a Yandex.Cloud managed Kubernetes cluster using Terraform:
+```
+$ cd ../terraform_ykc
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kubeconfig = <<EOT
+apiVersion: v1
+clusters:
+  - cluster:
+      server: https://84.201.175.39
+      certificate-authority-data: ...
+    name: yc-managed-k8s-catmil589ak21jvv065o
+contexts:
+  - context:
+      cluster: yc-managed-k8s-catmil589ak21jvv065o
+      user: yc-managed-k8s-catmil589ak21jvv065o
+    name: yc-reddit-k8s
+current-context: yc-reddit-k8s
+kind: Config
+preferences: {}
+users:
+  - name: yc-managed-k8s-catmil589ak21jvv065o
+    user:
+      exec:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        args:
+          - k8s
+          - create-token
+          - --profile=default
+        command: yc
+        env: null
+        interactiveMode: IfAvailable
+        provideClusterInfo: false
+
+EOT
+
+$ yc managed-kubernetes cluster get-credentials reddit-k8s --external
+
+Context 'yc-reddit-k8s' was added as default to kubeconfig '/Users/vshender/.kube/config'.
+Check connection to cluster using 'kubectl cluster-info --kubeconfig /Users/vshender/.kube/config'.
+
+$ kubectl config current-context
+yc-reddit-k8s
+```
+
+Deploy the application:
+```
+$ cd ../reddit
+
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+deployment.apps/comment created
+service/comment-db created
+service/comment created
+namespace/dev unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui created
+service/ui created
+
+$ kubectl get nodes -o wide
+NAME                        STATUS   ROLES    AGE   VERSION    INTERNAL-IP     EXTERNAL-IP     OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+cl1uup9l8cjjkjmftnr5-ahad   Ready    <none>   17m   v1.19.15   192.168.10.26   130.193.49.66   Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+
+$ kubectl describe service ui -n dev | grep NodePort
+Type:                     NodePort
+NodePort:                 <unset>  30079/TCP
+```
+
+Open http://130.193.49.66:30079 and check the application.
+
+Delete the application and destroy the created Kubernetes cluster:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+
+$ kubectl config use-context minikube
+Switched to context "minikube".
+
+$ cd ../terraform_ykc
+
+$ terraform destroy -auto-approve
+...
+
+Destroy complete! Resources: 4 destroyed.
 ```
 
 </details>
