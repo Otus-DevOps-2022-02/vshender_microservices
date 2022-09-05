@@ -2356,3 +2356,528 @@ $ terraform destroy -auto-approve
 ```
 
 </details>
+
+
+## Homework #30: kubernetes-2
+
+- Started a local Kubernetes cluster using minikube.
+- Started the application in the minikube cluster.
+- Started minikube dashboard.
+- Created the `dev` namespace.
+- Started the application in a Yandex.Cloud managed Kubernetes cluster.
+- Created a Yandex.Cloud managed Kubernetes cluster using Terraform.
+
+<details><summary>Details</summary>
+
+Start a local Kubernetes cluster using minikube:
+```
+$ minikube start --cpus=6 --memory=6g --vm-driver=virtualbox
+😄  minikube v1.26.1 on Darwin 12.5.1
+🆕  Kubernetes 1.24.3 is now available. If you would like to upgrade, specify: --kubernetes-version=v1.24.3
+✨  Using the virtualbox driver based on existing profile
+💿  Downloading VM boot image ...
+    > minikube-v1.26.1-amd64.iso....:  65 B / 65 B [---------] 100.00% ? p/s 0s
+    > minikube-v1.26.1-amd64.iso:  270.83 MiB / 270.83 MiB  100.00% 1.33 MiB p/
+👍  Starting control plane node minikube in cluster minikube
+💾  Downloading Kubernetes v1.23.3 preload ...
+    > preloaded-images-k8s-v18-v1...:  400.43 MiB / 400.43 MiB  100.00% 1.05 Mi
+🔄  Restarting existing virtualbox VM for "minikube" ...
+🐳  Preparing Kubernetes v1.23.3 on Docker 20.10.12 ...
+    ▪ kubelet.housekeeping-interval=5m
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+    ▪ Using image k8s.gcr.io/ingress-nginx/controller:v1.1.1
+    ▪ Using image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+    ▪ Using image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+🔎  Verifying Kubernetes components...
+🔎  Verifying ingress addon...
+🌟  Enabled addons: storage-provisioner, default-storageclass, ingress
+
+❗  /usr/local/bin/kubectl is version 1.25.0, which may have incompatibilites with Kubernetes 1.23.3.
+    ▪ Want kubectl v1.23.3? Try 'minikube kubectl -- get pods -A'
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+$ kubectl get nodes
+NAME       STATUS   ROLES                  AGE    VERSION
+minikube   Ready    control-plane,master   107d   v1.23.3
+
+$ cat ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /Users/vshender/.minikube/ca.crt
+    extensions:
+    - extension:
+        last-update: Sat, 27 Aug 2022 23:07:51 +03
+        provider: minikube.sigs.k8s.io
+        version: v1.26.1
+      name: cluster_info
+    server: https://192.168.59.101:8443
+  name: minikube
+contexts:
+- context:
+    cluster: minikube
+    extensions:
+    - extension:
+        last-update: Sat, 27 Aug 2022 23:07:51 +03
+        provider: minikube.sigs.k8s.io
+        version: v1.26.1
+      name: context_info
+    namespace: default
+    user: minikube
+  name: minikube
+current-context: minikube
+kind: Config
+preferences: {}
+users:
+- name: minikube
+  user:
+    client-certificate: /Users/vshender/.minikube/profiles/minikube/client.crt
+    client-key: /Users/vshender/.minikube/profiles/minikube/client.key
+
+$ kubectl config current-context
+minikube
+
+$ kubectl config get-contexts
+CURRENT   NAME       CLUSTER    AUTHINFO   NAMESPACE
+*         minikube   minikube   minikube   default
+```
+
+Start the [ui deployment](./kubernetes/reddit/ui-deployment.yml):
+```
+$ cd kubernetes/reddit
+
+$ kubectl apply -f ui-deployment.yml
+deployment.apps/ui created
+
+$ kubectl get deployments
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+ui     3/3     3            3           2m50s
+
+$ kubectl get pods --selector component=ui
+NAME                  READY   STATUS    RESTARTS   AGE
+ui-5df8d9f844-d7m74   1/1     Running   0          10m
+ui-5df8d9f844-f6227   1/1     Running   0          10m
+ui-5df8d9f844-gxdft   1/1     Running   0          10m
+
+$ kubectl port-forward ui-5df8d9f844-d7m74 8080:9292
+Forwarding from 127.0.0.1:8080 -> 9292
+Forwarding from [::1]:8080 -> 9292
+Handling connection for 8080
+...
+```
+
+Open http://localhost:8080/ and check the `ui` component.
+
+Start the [comment service](./kubernetes/reddit/comment-service.yml):
+```
+$ kubectl apply -f comment-deployment.yml
+deployment.apps/comment created
+
+$ kubectl apply -f comment-service.yml
+service/comment created
+
+$ kubectl get services
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+comment      ClusterIP   10.98.27.148   <none>        9292/TCP   6s
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    107d
+
+$ kubectl describe service comment | grep Endpoints
+Endpoints:         172.17.0.7:9292,172.17.0.8:9292,172.17.0.9:9292
+
+$ kubectl exec -it ui-5df8d9f844-d7m74 -- nslookup comment
+Server:         10.96.0.10
+Address:        10.96.0.10:53
+
+** server can't find comment.cluster.local: NXDOMAIN
+
+Name:   comment.default.svc.cluster.local
+Address: 10.101.78.94
+...
+```
+
+Start the whole application:
+```
+$ kubectl apply \
+    -f comment-deployment.yml \
+    -f comment-mongodb-service.yml \
+    -f comment-service.yml \
+    -f mongo-deployment.yml \
+    -f mongo-service.yml \
+    -f post-deployment.yml \
+    -f post-mongodb-service.yml \
+    -f post-service.yml \
+    -f ui-deployment.yml
+deployment.apps/comment unchanged
+service/comment-db created
+service/comment unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui unchanged
+
+$ kubectl port-forward ui-5df8d9f844-d7m74 8080:9292
+Forwarding from 127.0.0.1:8080 -> 9292
+Forwarding from [::1]:8080 -> 9292
+Handling connection for 8080
+```
+
+Open http://localhost:8080/ and check the application.
+
+Start the [ui service](./kubernetes/reddit/ui-service.yml) that uses `NodePort`:
+```
+$ kubectl apply -f ui-service.yml
+service/ui created
+
+; minikube service list
+|---------------|------------------------------------|--------------|-----------------------------|
+|   NAMESPACE   |                NAME                | TARGET PORT  |             URL             |
+|---------------|------------------------------------|--------------|-----------------------------|
+| default       | comment                            | No node port |
+| default       | comment-db                         | No node port |
+| default       | kubernetes                         | No node port |
+| default       | mongodb                            | No node port |
+| default       | post                               | No node port |
+| default       | post-db                            | No node port |
+| default       | ui                                 |         9292 | http://192.168.59.101:31833 |
+| ingress-nginx | ingress-nginx-controller           | http/80      | http://192.168.59.101:32622 |
+|               |                                    | https/443    | http://192.168.59.101:32430 |
+| ingress-nginx | ingress-nginx-controller-admission | No node port |
+| kube-system   | kube-dns                           | No node port |
+|---------------|------------------------------------|--------------|-----------------------------|
+```
+
+Open http://192.168.59.101:31833 (or execute `minikube service ui`) and check the application:
+```
+$ minikube service ui
+|-----------|------|-------------|-----------------------------|
+| NAMESPACE | NAME | TARGET PORT |             URL             |
+|-----------|------|-------------|-----------------------------|
+| default   | ui   |        9292 | http://192.168.59.101:31833 |
+|-----------|------|-------------|-----------------------------|
+🎉  Opening service default/ui in default browser...
+```
+
+Show minikube addon list:
+```
+$ minikube addons list
+|-----------------------------|----------|--------------|--------------------------------|
+|         ADDON NAME          | PROFILE  |    STATUS    |           MAINTAINER           |
+|-----------------------------|----------|--------------|--------------------------------|
+| ambassador                  | minikube | disabled     | 3rd party (Ambassador)         |
+| auto-pause                  | minikube | disabled     | Google                         |
+| csi-hostpath-driver         | minikube | disabled     | Kubernetes                     |
+| dashboard                   | minikube | disabled     | Kubernetes                     |
+| default-storageclass        | minikube | enabled ✅   | Kubernetes                     |
+| efk                         | minikube | disabled     | 3rd party (Elastic)            |
+| freshpod                    | minikube | disabled     | Google                         |
+| gcp-auth                    | minikube | disabled     | Google                         |
+| gvisor                      | minikube | disabled     | Google                         |
+| headlamp                    | minikube | disabled     | 3rd party (kinvolk.io)         |
+| helm-tiller                 | minikube | disabled     | 3rd party (Helm)               |
+| inaccel                     | minikube | disabled     | 3rd party (InAccel             |
+|                             |          |              | [info@inaccel.com])            |
+| ingress                     | minikube | enabled ✅   | Kubernetes                     |
+| ingress-dns                 | minikube | disabled     | Google                         |
+| istio                       | minikube | disabled     | 3rd party (Istio)              |
+| istio-provisioner           | minikube | disabled     | 3rd party (Istio)              |
+| kong                        | minikube | disabled     | 3rd party (Kong HQ)            |
+| kubevirt                    | minikube | disabled     | 3rd party (KubeVirt)           |
+| logviewer                   | minikube | disabled     | 3rd party (unknown)            |
+| metallb                     | minikube | disabled     | 3rd party (MetalLB)            |
+| metrics-server              | minikube | disabled     | Kubernetes                     |
+| nvidia-driver-installer     | minikube | disabled     | Google                         |
+| nvidia-gpu-device-plugin    | minikube | disabled     | 3rd party (Nvidia)             |
+| olm                         | minikube | disabled     | 3rd party (Operator Framework) |
+| pod-security-policy         | minikube | disabled     | 3rd party (unknown)            |
+| portainer                   | minikube | disabled     | 3rd party (Portainer.io)       |
+| registry                    | minikube | disabled     | Google                         |
+| registry-aliases            | minikube | disabled     | 3rd party (unknown)            |
+| registry-creds              | minikube | disabled     | 3rd party (UPMC Enterprises)   |
+| storage-provisioner         | minikube | enabled ✅   | Google                         |
+| storage-provisioner-gluster | minikube | disabled     | 3rd party (Gluster)            |
+| volumesnapshots             | minikube | disabled     | Kubernetes                     |
+|-----------------------------|----------|--------------|--------------------------------|
+```
+
+Start minikube dashboard:
+```
+$ minikube dashboard
+🔌  Enabling dashboard ...
+    ▪ Using image kubernetesui/metrics-scraper:v1.0.8
+    ▪ Using image kubernetesui/dashboard:v2.6.0
+🤔  Verifying dashboard health ...
+🚀  Launching proxy ...
+🤔  Verifying proxy health ...
+🎉  Opening http://127.0.0.1:49442/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/ in your default browser...
+^C
+
+$ kubectl get all -n kubernetes-dashboard --selector k8s-app=kubernetes-dashboard
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/kubernetes-dashboard-cd7c84bfc-mlv95   1/1     Running   0          10m
+
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes-dashboard   ClusterIP   10.104.177.141   <none>        80/TCP    10m
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/kubernetes-dashboard   1/1     1            1           10m
+
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/kubernetes-dashboard-cd7c84bfc   1         1         1       10m
+```
+
+Create the `dev` namespace and start the application in that namespace:
+```
+$ kubectl delete -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+
+$ kubectl get pods
+No resources found in default namespace.
+
+$ kubectl get pods -n dev
+NAME                       READY   STATUS              RESTARTS   AGE
+comment-5bdb65d65b-5t682   1/1     Running             0          14s
+comment-5bdb65d65b-f2gvd   1/1     Running             0          14s
+comment-5bdb65d65b-qvxdc   1/1     Running             0          14s
+mongo-67685ddb89-cn57z     1/1     Running             0          14s
+post-b7857bb4d-22zzw       1/1     Running             0          13s
+post-b7857bb4d-gm79j       1/1     Running             0          13s
+post-b7857bb4d-zz8z2       0/1     ContainerCreating   0          13s
+ui-8878d5c7d-7nz5v         0/1     ContainerCreating   0          13s
+ui-8878d5c7d-fjtmp         0/1     ContainerCreating   0          13s
+ui-8878d5c7d-svs6t         0/1     ContainerCreating   0          13s
+```
+
+Execute `minikube service ui` and check the application:
+```
+$ minikube service ui -n dev
+|-----------|------|-------------|-----------------------------|
+| NAMESPACE | NAME | TARGET PORT |             URL             |
+|-----------|------|-------------|-----------------------------|
+| dev       | ui   |        9292 | http://192.168.59.101:30582 |
+|-----------|------|-------------|-----------------------------|
+🎉  Opening service dev/ui in default browser...
+```
+
+Delete the application:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+```
+
+Obtain credentials for the created Yandex.Cloud managed Kubernetes cluster:
+```
+$ yc managed-kubernetes cluster get-credentials test-cluster --external
+
+Context 'yc-test-cluster' was added as default to kubeconfig '/Users/vshender/.kube/config'.
+Check connection to cluster using 'kubectl cluster-info --kubeconfig /Users/vshender/.kube/config'.
+
+Note, that authentication depends on 'yc' and its config profile 'default'.
+To access clusters using the Kubernetes API, please use Kubernetes Service Account.
+
+$ kubectl config current-context
+yc-test-cluster
+
+$ kubectl config get-contexts
+CURRENT   NAME              CLUSTER                               AUTHINFO                              NAMESPACE
+          minikube          minikube                              minikube                              default
+*         yc-test-cluster   yc-managed-k8s-catds6ugdigmi36t9331   yc-managed-k8s-catds6ugdigmi36t9331
+```
+
+Start the application in the Yandex.Cloud managed Kubernetes cluster:
+```
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+deployment.apps/comment created
+service/comment-db created
+service/comment created
+namespace/dev unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui created
+service/ui created
+
+$ kubectl get nodes -o wide
+NAME                        STATUS   ROLES    AGE     VERSION   INTERNAL-IP   EXTERNAL-IP     OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+cl19n73v3eg48lc5v71n-omim   Ready    <none>   7m30s   v1.22.6   10.128.0.21   51.250.8.149    Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+cl19n73v3eg48lc5v71n-ukor   Ready    <none>   7m41s   v1.22.6   10.128.0.16   62.84.118.232   Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+
+$ kubectl describe service ui -n dev | grep NodePort
+Type:                     NodePort
+NodePort:                 <unset>  30089/TCP
+```
+
+Open http://51.250.8.149:30089/ and check the application.
+
+Delete the application:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+```
+
+Switch back to the `minikube` context:
+```
+$ kubectl config use-context minikube
+Switched to context "minikube".
+
+$ kubectl config current-context
+minikube
+```
+
+Create a Yandex.Cloud managed Kubernetes cluster using Terraform:
+```
+$ cd ../terraform_ykc
+
+$ terraform init
+...
+
+$ terraform apply -auto-approve
+...
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kubeconfig = <<EOT
+apiVersion: v1
+clusters:
+  - cluster:
+      server: https://84.201.175.39
+      certificate-authority-data: ...
+    name: yc-managed-k8s-catmil589ak21jvv065o
+contexts:
+  - context:
+      cluster: yc-managed-k8s-catmil589ak21jvv065o
+      user: yc-managed-k8s-catmil589ak21jvv065o
+    name: yc-reddit-k8s
+current-context: yc-reddit-k8s
+kind: Config
+preferences: {}
+users:
+  - name: yc-managed-k8s-catmil589ak21jvv065o
+    user:
+      exec:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        args:
+          - k8s
+          - create-token
+          - --profile=default
+        command: yc
+        env: null
+        interactiveMode: IfAvailable
+        provideClusterInfo: false
+
+EOT
+
+$ yc managed-kubernetes cluster get-credentials reddit-k8s --external
+
+Context 'yc-reddit-k8s' was added as default to kubeconfig '/Users/vshender/.kube/config'.
+Check connection to cluster using 'kubectl cluster-info --kubeconfig /Users/vshender/.kube/config'.
+
+$ kubectl config current-context
+yc-reddit-k8s
+```
+
+Deploy the application:
+```
+$ cd ../reddit
+
+$ kubectl apply -f dev-namespace.yml
+namespace/dev created
+
+$ kubectl apply -n dev -f .
+deployment.apps/comment created
+service/comment-db created
+service/comment created
+namespace/dev unchanged
+deployment.apps/mongo created
+service/mongodb created
+deployment.apps/post created
+service/post-db created
+service/post created
+deployment.apps/ui created
+service/ui created
+
+$ kubectl get nodes -o wide
+NAME                        STATUS   ROLES    AGE   VERSION    INTERNAL-IP     EXTERNAL-IP     OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+cl1uup9l8cjjkjmftnr5-ahad   Ready    <none>   17m   v1.19.15   192.168.10.26   130.193.49.66   Ubuntu 20.04.4 LTS   5.4.0-117-generic   containerd://1.6.6
+
+$ kubectl describe service ui -n dev | grep NodePort
+Type:                     NodePort
+NodePort:                 <unset>  30079/TCP
+```
+
+Open http://130.193.49.66:30079 and check the application.
+
+Delete the application and destroy the created Kubernetes cluster:
+```
+$ kubectl delete -n dev -f .
+kubectl delete -n dev -f .
+deployment.apps "comment" deleted
+service "comment-db" deleted
+service "comment" deleted
+Warning: deleting cluster-scoped resources, not scoped to the provided namespace
+namespace "dev" deleted
+deployment.apps "mongo" deleted
+service "mongodb" deleted
+deployment.apps "post" deleted
+service "post-db" deleted
+service "post" deleted
+deployment.apps "ui" deleted
+service "ui" deleted
+
+$ kubectl config use-context minikube
+Switched to context "minikube".
+
+$ cd ../terraform_ykc
+
+$ terraform destroy -auto-approve
+...
+
+Destroy complete! Resources: 4 destroyed.
+```
+
+</details>
